@@ -9,9 +9,6 @@ const routes = [
   { path: "/editor", name: "Editor", component: Editor }
 ]
 
-
-
-
 const router = createRouter({
   history: createWebHistory(),
   routes
