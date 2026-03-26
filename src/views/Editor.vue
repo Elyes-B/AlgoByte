@@ -8,7 +8,7 @@
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>
           <option value="java">Java</option>
-          <option value="cpp">C++</option>
+          <option value="c">C</option>
         </select>
       </div>
 
@@ -21,8 +21,7 @@
           <option value="monokai">Monokai</option>
         </select>
       </div>
-
-      <div class="ms-auto d-flex align-items-center gap-1">
+      <div class="ms-auto d-flex align-items-center gap-1"> 
         <button type="button" class="btn btn-sm btn-light border d-flex align-items-center gap-1">
           <img src="../assets/play.svg" width="14" alt="Run"> Run
         </button>
@@ -35,7 +34,7 @@
     <div class="editor-container" :style="{ '--editor-font-size': fontSize + 'px' }">
       <textarea ref="editorTextarea"></textarea>
     </div>
-  </div>
+  </div> 
 </template>
 
 <script>
@@ -71,7 +70,7 @@ export default {
       javascript: "javascript",
       python: "python",
       java: "text/x-java",
-      cpp: "text/x-c++src",
+      c: "text/x-csrc",
     };
 
     const createEditor = () => {
