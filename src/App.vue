@@ -6,7 +6,6 @@ import editorComponent from './components/editorComponent.vue';
 
 <template>
   <HeaderBar />
-  <router-view />
   <editorComponent></editorComponent>
   <FooterBar />
 </template>

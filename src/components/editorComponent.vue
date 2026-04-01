@@ -1,7 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
+import testCaseForm from './testCaseForm.vue'
+import testCase from './testCase.vue'
 
+/* Eclipse theme setup for Monaco Editor */
 const eclipseTheme = {
   base: 'vs',
   inherit: true,
@@ -21,65 +24,102 @@ const handleBeforeMount = (monaco) => {
   monaco.editor.defineTheme('eclipse', eclipseTheme)
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
-const codeTemplates = {
-  javascript: `console.log("Hello AlgoByte");`,
-  python: `print("Hello AlgoByte")`,
-  java: `public class Main {
-  public static void main(String[] args) {
-    System.out.println("Hello AlgoByte");
-  }
-}`,
-  c: `#include <stdio.h>
+/* code execution section */
 
-int main(void) {
-  printf("Hello AlgoByte\\n");
-  return 0;
-}`
-}
-const failureStatuses = new Set(['compile_error', 'runtime_error', 'runner_unavailable'])
+const functionName= 'solution'
+const language = ref('typescript'); //the selected language
+const numberOfInputs = ref(1)
+const outputDataType = 'string' //for now pre selected in sprint 2 we will add an option to change it
+const acceptedDataTypes = ['int', 'double', 'boolean', 'string'] //the supported data types in the site
+const submissionList = ref([]) //a list that holds all the code submissions results (useful for sprint 2 to display the history of submissions)
 
-const code = ref(codeTemplates.javascript);
-const language = ref('javascript');
-const fontSize = ref(14);
-const isSubmitting = ref(false);
-const statusMessage = ref('');
-const errorMessage = ref('');
-const lastSubmission = ref(null);
-
-watch(language, (lang) => {
-  code.value = codeTemplates[lang] ?? codeTemplates.javascript
+const inputsDataType = computed(() => { // since there are multiple inputs we turn it into an array of data types, the same thing about sprint 2 also applies here
+    const dataTypes = []
+    for (let i = 0; i < numberOfInputs.value; i++) {
+        dataTypes.push('string')
+    }
+    return dataTypes
 })
 
-const getApiErrorMessage = (payload) => {
-  if (payload?.message) {
-    return payload.message
+const inputsNames = computed(() => { //just to display input 1, input 2... in the test case form
+    const names = []
+    for (let i = 0; i < numberOfInputs.value; i++) {
+        names.push(`input${i + 1}`)
+    }
+    return names
+})
+
+const fullFuntion = computed(() => {
+  switch (language.value) {
+    case 'typescript':
+      return `function ${functionName}(${inputsNames.value.join(', ')}) {\n  // your code here\n}`
+
+    case 'python':
+      return `def ${functionName}(${inputsNames.value.join(', ')}):\n    # your code here\n`
+
+    case 'java':
+      let javaInputsDataType = []
+      for (let i = 0; i < numberOfInputs.value; i++) {
+          inputsDataType.value[i] == "string" ? javaInputsDataType.push("String") : javaInputsDataType.push(inputsDataType.value[i])
+      }
+      let javaOutputDataType = outputDataType === "string" ? "String" : outputDataType
+      return `public ${javaOutputDataType} ${functionName}(${javaInputsDataType.map((type, index) => `${type} ${inputsNames.value[index]}`).join(', ')}) {\n  // your code here\n}`
+
+    case 'c':
+      let cInputsDataType = []
+      for (let i = 0; i < numberOfInputs.value; i++) {
+          inputsDataType.value[i] == "string" ? cInputsDataType.push("char*") : cInputsDataType.push(inputsDataType.value[i])
+          cInputsDataType[i] == "boolean" ? cInputsDataType[i] = "int" : cInputsDataType[i] = cInputsDataType[i]
+      }
+      let cOutputDataType = outputDataType === "string" ? "char*" : outputDataType
+      cOutputDataType == "boolean" ? cOutputDataType = "int" : cOutputDataType = cOutputDataType
+  return `${cOutputDataType} solution(${cInputsDataType.map((type, index) => `${type} ${inputsNames.value[index]}`).join(', ')}) {\n  // your code here\n}`
+
+    default:
+      return `function ${functionName}(${inputsNames.value.join(', ')}): ${outputDataType} {\n  // your code here\n}`
   }
+})
 
-  const firstValidationError = Object.values(payload?.errors ?? {})[0]
 
-  if (Array.isArray(firstValidationError) && firstValidationError.length > 0) {
-    return firstValidationError[0]
-  }
 
-  return 'Unable to send the code to the API.'
-}
+const languages = [ // the supported languages in the site
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'c', label: 'C' },
+]
+
+//variables declaration for editor and execution
+const failureStatuses = new Set(['compile_error', 'runtime_error', 'runner_unavailable']) //determines how the code execution failed
+
+const code = ref(fullFuntion.value) //the actual code that will be executed
+const fontSize = ref(14); //the editor font sinze
+const isSubmitting = ref(false); //a boolean to determine if the code is being executed
+const statusMessage = ref(''); //a message to show the status of the last code execution (like completion)
+const errorMessage = ref(''); //an error message that gets displayed to the console after failure
+const lastSubmission = ref(null); //an object that holds the result of the last code execution, it has the following structure
+const MatchedOutput = ref(true) //a boolean to determine if the output from piston matched the expected output from the test case
+const failedTestCase = ref(null) //an object that holds the test case that failed in the last execution (useful for sprint 2 to display the failed test case details)
+
+watch(language, () => {
+  code.value = fullFuntion.value
+})
 
 const hasExecutionFailure = computed(() => {
-  return lastSubmission.value ? failureStatuses.has(lastSubmission.value.status) : false
+  return lastSubmission.value ? failureStatuses.has(lastSubmission.value.status) : false //if the last submission  failed
 })
 
 const resultPanelClass = computed(() => {
-  return errorMessage.value || hasExecutionFailure.value
-    ? 'submission-panel-error'
-    : 'submission-panel-success'
+  return (errorMessage.value || hasExecutionFailure.value || !MatchedOutput.value)  //displays either the success execution panel or the error panel
+    ? 'submission-panel-error' //red background for error
+    : 'submission-panel-success' //green background for success
 })
 
 const formatExecutionStatus = (status) => {
-  return status ? status.replaceAll('_', ' ') : 'unknown'
+  return status ? status.replaceAll('_', ' ') : 'unknown' //just converts complie_error to compile error
 }
 
-const formatRuntimeLabel = (submission) => {
+const formatRuntimeLabel = (submission) => { //displays the runtime and the language used in the last submission
   if (!submission?.runtime) {
     return ''
   }
@@ -90,45 +130,123 @@ const formatRuntimeLabel = (submission) => {
 }
 
 const runCode = async () => {
+  //variables declaration for the code before exeuction
+  let initialCode = code.value //we save the initial code before execution to prevent the formatting for execution from changing the code in the editor
   errorMessage.value = ''
   statusMessage.value = ''
   lastSubmission.value = null
+  failedTestCase.value = null
+  MatchedOutput.value = true
+  submissionList.value = [] //we reset the submission list to only keep the last execution result (useful for sprint 2 when we will display the history of submissions)
 
   if (!code.value.trim()) {
-    errorMessage.value = 'Write some code before sending it to the API.'
+    errorMessage.value = 'Write some code before sending it to the API.' //if the editor is empty then we tell the user to wrote code
     return
   }
 
-  isSubmitting.value = true
-
+  isSubmitting.value = true //otherwise we send the code to the API and wait for the response
   try {
-    const response = await fetch(`${apiBaseUrl}/api/code-submissions`, {
+    for (let i =0;i<listOfTestCases.value.length;i++){
+    listOfTestCases.value[i].MatchedOutput = null //we reset the matched output of the test case before execution to determine later if it passed or failed
+    const wrappedCode = formatCodeForExecution(listOfTestCases.value[i], initialCode) //we format the code for execution by adding the function call with the test case inputs at the end of the code in the editor;
+    const response = await fetch('/piston/api/v2/execute', { //api call to piston to execute the code
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         language: language.value,
-        code: code.value
+        version: '*', // the star means use whatever version of the compiler you have installed (not specific)
+        files: [{ content: wrappedCode }] //the content is the code in the editor (which is by default the template)
       })
     })
 
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
-      throw new Error(getApiErrorMessage(payload))
+      //in case piston did not accept the request as valid code
+      throw new Error(payload?.message ?? 'Piston rejected the request.')
     }
 
-    lastSubmission.value = payload?.data ?? null
-    statusMessage.value = payload?.message ?? 'Code executed successfully.'
+    if (payload?.compile && payload.compile.code !== 0) {
+      //in case an error occures within the code itself
+      lastSubmission.value = {
+        status: 'compile_error',
+        stdout: null,
+        stderr: payload.compile.stderr || null,
+        compile_output: payload.compile.output || payload.compile.stderr || null,
+        exit_code: payload.compile.code,
+        runtime: payload.language,
+        runtime_version: payload.version,
+        signal: payload.compile.signal || null,
+      }
+      statusMessage.value = 'Compilation failed.'
+      return
+    }
+
+    // execution result here
+    const run = payload?.run //the ? after the variables name means (if the variable is NULL dont try to execute the method, useful for preventing crashes)
+    const didFail = run.code !== 0 || !!run.signal
+
+    lastSubmission.value = {
+      status: didFail ? 'runtime_error' : 'completed', //ternary operator: if the didfail is true then execute what if after the ? points otherwise execute what is after :
+      stdout: run.stdout || null,
+      stderr: run.stderr || null,
+      compile_output: payload?.compile?.output || null,
+      exit_code: run.code,
+      runtime: payload.language,
+      runtime_version: payload.version,
+      signal: run.signal || null,
+      wall_time: run.wall_time || null,
+    }
+    if(compareOutput(run.stdout, listOfTestCases.value[i].output)){
+      statusMessage.value = didFail ? 'Code executed with errors.' : 'Code executed successfully.'
+      listOfTestCases.value[i].status = didFail? 'failed' : 'passed'
+      lastSubmission.value.MatchedOutput = true
+      MatchedOutput.value = true
+      submissionList.value.push(lastSubmission.value) //we add the submission result to the submission list
+    } else {
+      statusMessage.value = 'Code executed but the output did not match the expected output.'
+      listOfTestCases.value[i].status = 'failed'
+      lastSubmission.value.MatchedOutput = false
+      MatchedOutput.value = false
+      failedTestCase.value = listOfTestCases.value[i]
+      break;
+    }
+  }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Unable to send the code to the API.'
+    errorMessage.value = error instanceof Error ? error.message : 'Unable to reach Piston.' //in case we catch an error when trying to fetch the executoin we add an error message
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false //always after fetch we set this to false
+    code.value = initialCode //we reset the code in the editor to the initial code (before execution)
   }
 }
 
+const formatCodeForExecution = (testCase) => {
+  let inputs = formatInputsForLanguage(testCase.inputs) //we format the inputs according to the language (for example we add "" around string inputs)
+  switch(language.value) {
+    case 'python':
+      return `${code.value}\n\nprint(${functionName}(${inputs}))` 
+    case 'java':
+  return `public class Main {\n  ${code.value}\n\n  public static void main(String[] args) {\n    Main obj = new Main();\n    System.out.println(obj.${functionName}(${inputs}));\n  }\n}`
+    case 'c':
+      return `#include <stdio.h>\n${code.value} int main() { printf("%d", ${functionName}(${inputs})); return 0; }`
+    default:
+      return `${code.value}\nconsole.log(${functionName}(${inputs}))`
+  }
+
+}
+
+const formatInputsForLanguage = (inputs) => {
+  return inputs.map((input, i) => {
+    const type = inputsDataType.value[i]
+    if (type === 'string') return `"${input}"`  // ← adds "hello" instead of hello
+    if (type === 'boolean' && language.value === 'python') {
+      return input.trim().toLowerCase() === 'true' ? 'True' : 'False'
+    }
+    return input
+  }).join(', ')
+}
+
+//simple font size management
 const increaseFontSize = () => {
   if (fontSize.value < 36) fontSize.value += 2;
 }
@@ -142,12 +260,9 @@ const editorOptions = computed(() => ({
   automaticLayout: true
 }))
 
-const languages = [
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'python', label: 'Python' },
-  { value: 'java', label: 'Java' },
-  { value: 'c', label: 'C' },
-]
+
+//using prebuilt it themes for the editor
+
 
 const theme = ref('vs-dark')
 const themes = [
@@ -159,6 +274,93 @@ const themes = [
 const isDarkTheme = computed(() => {
   return !['vs', 'eclipse'].includes(theme.value)
 })
+
+/* testcases section */
+
+//
+const numberOfTestCases = ref(0)
+const listOfTestCases = ref([]) 
+
+
+const addTestCase = (testCase) => { //when we add a test case from the testCaseForm component using emit we call this method
+  // if the user left the form empty we change the emptiness to Null
+  for (let i =0;i<testCase.inputs.length;i++){
+        if(testCase.inputs[i] === ''){
+            testCase.inputs[i] = "Null"
+        }
+  }
+  if(testCase.output === ''){
+        testCase.output = "Null" //this also applies here
+  }
+    testCase.id = Date.now() //we add an id to identify them (useful when using for loops with :key)
+    testCase.status = 'not executed' //the default status of the test case before execution
+    let testCaseCopy = JSON.parse(JSON.stringify(testCase)) //we send a copy not the real object
+    //because if the user changes (for example an input value) it will change AUTOMATICALLY the test case before we even hit submit
+    listOfTestCases.value.push(testCaseCopy)  
+    numberOfTestCases.value++
+}
+
+const removeTestCase = (testCase) => {
+  const index = listOfTestCases.value.indexOf(testCase)
+  if (index > -1) {
+    if (failedTestCase.value?.id === listOfTestCases.value[index].id) {
+      failedTestCase.value = null
+      MatchedOutput.value = true 
+    }
+    listOfTestCases.value.splice(index, 1)
+    numberOfTestCases.value--
+  }
+}
+
+const changeTestCase = (updatedTestCase,id) => {
+  //an emit function from the testCase component to change a test case from the editor
+    for (let i =0;i<listOfTestCases.value.length;i++){
+        if(listOfTestCases.value[i].id === id){ //find the exact test case by id and change it with the updated one
+            listOfTestCases.value[i] = updatedTestCase
+            break
+        }
+    }
+}
+
+/* test case execution */
+
+
+
+const transformValue = (value, dataType) => {
+  switch (dataType.toLowerCase().trim()) {
+    case 'int':
+      return parseInt(value, 10)
+
+    case 'float':
+      return parseFloat(value)
+
+    case 'boolean':
+      return value.trim().toLowerCase() === 'true'
+
+    case 'string':
+      return String(value).trim()
+
+    default:
+      throw new Error(`Unknown datatype: ${dataType}`)
+  }
+}
+
+const compareOutput = (pistonOutput, expectedOutput) => {
+  try {
+    const actual = transformValue(pistonOutput, outputDataType)
+    const expected = transformValue(expectedOutput, outputDataType)
+
+    return actual === expected
+
+  } catch (error) {
+    console.error('compareOutput error:', error.message)
+    return false
+  }
+}
+
+console.log(compareOutput("true", "true", "boolean")) //test for the compare output function
+console.log(compareOutput("true", "false", "boolean")) //test for the compare output function
+
 </script>
 
 <template>
@@ -211,9 +413,6 @@ const isDarkTheme = computed(() => {
       
       <!-- Run Button -->
       <button @click="runCode" class="btn btn-success btn-sm px-4 py-1 fw-bold d-flex align-items-center gap-2 shadow run-btn rounded-pill border-0">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
-          <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
-        </svg>
         <span class="d-none d-sm-inline">Run Code</span>
         <span class="d-inline d-sm-none">Run</span>
       </button>
@@ -230,43 +429,62 @@ const isDarkTheme = computed(() => {
       />
     </div>
 
-    <div
-      v-if="isSubmitting || statusMessage || errorMessage || lastSubmission"
-      :class="[
-        'submission-panel px-3 py-2 small border-top',
-        resultPanelClass
-      ]"
-    >
-      <div v-if="isSubmitting">Submitting code to the JDoodle API...</div>
-      <div v-else-if="errorMessage">{{ errorMessage }}</div>
-      <div v-else-if="lastSubmission" class="result-stack">
-        <div class="result-summary">
-          {{ statusMessage }}
-          Submission #{{ lastSubmission.id }} finished with status "{{ formatExecutionStatus(lastSubmission.status) }}"{{ formatRuntimeLabel(lastSubmission) }}.
-        </div>
-        <div class="result-meta">
-          <span>Engine: JDoodle API</span>
-          <span>Language: {{ lastSubmission.language }}</span>
-          <span>Exit code: {{ lastSubmission.exit_code ?? 'n/a' }}</span>
-          <span>Runtime: {{ lastSubmission.runtime ?? 'n/a' }}</span>
-          <span>Version: {{ lastSubmission.runtime_version ?? 'n/a' }}</span>
-          <span>Signal: {{ lastSubmission.signal ?? 'none' }}</span>
-          <span>Received: {{ lastSubmission.received_at }}</span>
-        </div>
-        <div v-if="lastSubmission.compile_output" class="result-block">
-          <div class="result-label">JDoodle Compiler Output</div>
-          <pre>{{ lastSubmission.compile_output }}</pre>
-        </div>
-        <div v-if="lastSubmission.stdout" class="result-block">
-          <div class="result-label">Standard Output</div>
-          <pre>{{ lastSubmission.stdout }}</pre>
-        </div>
-        <div v-if="lastSubmission.stderr" class="result-block">
-          <div class="result-label">Standard Error</div>
-          <pre>{{ lastSubmission.stderr }}</pre>
-        </div>
-      </div>
+    <testCaseForm 
+    @addTestCase="addTestCase"
+    :listOfTestCases="listOfTestCases"
+    :numberOfTestCases="numberOfTestCases"
+    :numberOfInputs="numberOfInputs"
+    @removeTestCase="removeTestCase"
+    @changeTestCase="changeTestCase"
+    :inputsNames="inputsNames"
+    :InputsDataType="inputsDataType"
+    :outputDataType="outputDataType"
+    ></testCaseForm>
+
+
+    <div v-if="isSubmitting || statusMessage || errorMessage || lastSubmission"
+  :class="['submission-panel px-3 py-2 small border-top', resultPanelClass]">
+
+  <div v-if="isSubmitting">Running code on Piston...</div>
+  <div v-else-if="errorMessage">{{ errorMessage }}</div>
+  <div v-else-if="lastSubmission" class="result-stack">
+
+    <div class="result-summary">
+      {{ statusMessage }}
+      Status: "{{ formatExecutionStatus(lastSubmission.status) }}"{{ formatRuntimeLabel(lastSubmission) }}.
+      <span v-if="lastSubmission.wall_time">Time: {{ lastSubmission.wall_time }}ms</span>
+      <p>Number of test cases passed {{submissionList.length}}</p>
     </div>
+
+    <div v-if="!MatchedOutput && failedTestCase!=null" class="result-summary">
+      <testCase @emitToDeleteToTestCaseForm="removeTestCase" :testCase="failedTestCase" :inputsNames="inputsNames" :InputsDataType="inputsDataType" :outputDataType="outputDataType"/>
+    </div>
+
+    <div class="result-meta">
+      <span>Engine: Piston</span>
+      <span>Language: {{ lastSubmission.runtime ?? 'n/a' }}</span>
+      <span>Version: {{ lastSubmission.runtime_version ?? 'n/a' }}</span>
+      <span>Exit code: {{ lastSubmission.exit_code ?? 'n/a' }}</span>
+      <span>Signal: {{ lastSubmission.signal ?? 'none' }}</span>
+    </div>
+
+    <div v-if="lastSubmission.compile_output" class="result-block">
+      <div class="result-label">Compiler Output</div>
+      <pre>{{ lastSubmission.compile_output }}</pre>
+    </div>
+
+    <div v-if="lastSubmission.stdout" class="result-block">
+      <div class="result-label">Standard Output</div>
+      <pre>{{ lastSubmission.stdout }}</pre>
+    </div>
+
+    <div v-if="lastSubmission.stderr" class="result-block">
+      <div class="result-label">Standard Error</div>
+      <pre>{{ lastSubmission.stderr }}</pre>
+    </div>
+
+  </div>
+</div>
   </div>
 </template>
 
