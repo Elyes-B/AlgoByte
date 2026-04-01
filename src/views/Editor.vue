@@ -34,7 +34,7 @@
     <div class="editor-container" :style="{ '--editor-font-size': fontSize + 'px' }">
       <textarea ref="editorTextarea"></textarea>
     </div>
-  </div> 
+  </div>
 </template>
 
 <script>
