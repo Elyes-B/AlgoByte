@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import testCaseForm from './testCaseForm.vue'
 import testCase from './testCase.vue'
+import previousSolutions from './previousSolutions.vue'
 
 /* Eclipse theme setup for Monaco Editor */
 const eclipseTheme = {
@@ -28,15 +29,16 @@ const handleBeforeMount = (monaco) => {
 
 const functionName= 'solution'
 const language = ref('typescript'); //the selected language
-const numberOfInputs = ref(1)
-const outputDataType = 'string' //for now pre selected in sprint 2 we will add an option to change it
+const numberOfInputs = ref(2)
+const outputDataType = 'int' //for now pre selected in sprint 2 we will add an option to change it
 const acceptedDataTypes = ['int', 'double', 'boolean', 'string'] //the supported data types in the site
 const submissionList = ref([]) //a list that holds all the code submissions results (useful for sprint 2 to display the history of submissions)
+const savedSolutions = ref([])
 
 const inputsDataType = computed(() => { // since there are multiple inputs we turn it into an array of data types, the same thing about sprint 2 also applies here
     const dataTypes = []
     for (let i = 0; i < numberOfInputs.value; i++) {
-        dataTypes.push('string')
+        dataTypes.push('int')
     }
     return dataTypes
 })
@@ -133,7 +135,6 @@ const runCode = async () => {
   //variables declaration for the code before exeuction
   let initialCode = code.value //we save the initial code before execution to prevent the formatting for execution from changing the code in the editor
   errorMessage.value = ''
-  statusMessage.value = ''
   lastSubmission.value = null
   failedTestCase.value = null
   MatchedOutput.value = true
@@ -178,7 +179,7 @@ const runCode = async () => {
         runtime_version: payload.version,
         signal: payload.compile.signal || null,
       }
-      statusMessage.value = 'Compilation failed.'
+      lastSubmission.value.status = 'Compilation failed.'
       return
     }
 
@@ -197,14 +198,13 @@ const runCode = async () => {
       signal: run.signal || null,
       wall_time: run.wall_time || null,
     }
-    if(compareOutput(run.stdout, listOfTestCases.value[i].output)){
-      statusMessage.value = didFail ? 'Code executed with errors.' : 'Code executed successfully.'
+    if(compareOutput(run.stdout, listOfTestCases.value[i].output, lastSubmission)){
+      lastSubmission.value.status = didFail ? 'Code executed with errors.' : 'Code executed successfully.'
       listOfTestCases.value[i].status = didFail? 'failed' : 'passed'
       lastSubmission.value.MatchedOutput = true
       MatchedOutput.value = true
       submissionList.value.push(lastSubmission.value) //we add the submission result to the submission list
     } else {
-      statusMessage.value = 'Code executed but the output did not match the expected output.'
       listOfTestCases.value[i].status = 'failed'
       lastSubmission.value.MatchedOutput = false
       MatchedOutput.value = false
@@ -218,7 +218,19 @@ const runCode = async () => {
     isSubmitting.value = false //always after fetch we set this to false
     code.value = initialCode //we reset the code in the editor to the initial code (before execution)
   }
+  if (allTestCasesPassed.value){
+    saveSolution() //if all test cases passed we save the solution automatically
+  }
 }
+
+const totalExecutionTime = computed(() => {
+  for (let i = 0; i < submissionList.value.length; i++) {
+    if (submissionList.value[i].wall_time) {
+      return submissionList.value[i].wall_time
+    }
+  }
+  return null
+})
 
 const formatCodeForExecution = (testCase) => {
   let inputs = formatInputsForLanguage(testCase.inputs) //we format the inputs according to the language (for example we add "" around string inputs)
@@ -238,7 +250,7 @@ const formatCodeForExecution = (testCase) => {
 const formatInputsForLanguage = (inputs) => {
   return inputs.map((input, i) => {
     const type = inputsDataType.value[i]
-    if (type === 'string') return `"${input}"`  // ← adds "hello" instead of hello
+    if (type === 'string') return `"${input}"` 
     if (type === 'boolean' && language.value === 'python') {
       return input.trim().toLowerCase() === 'true' ? 'True' : 'False'
     }
@@ -261,7 +273,7 @@ const editorOptions = computed(() => ({
 }))
 
 
-//using prebuilt it themes for the editor
+//using prebuilt themes for the editor
 
 
 const theme = ref('vs-dark')
@@ -322,10 +334,19 @@ const changeTestCase = (updatedTestCase,id) => {
     }
 }
 
+const allTestCasesPassed = computed(() => {
+  for (let i = 0; i < listOfTestCases.value.length; i++) {
+    if (listOfTestCases.value[i].status !== 'passed') {
+      return false
+    }
+  }
+  return listOfTestCases.value.length > 0 //if there are no test cases we
+})
+
 /* test case execution */
 
 
-
+// before we compare values and decide whether the output matches piston we need to transform them from strings to their actual datatype
 const transformValue = (value, dataType) => {
   switch (dataType.toLowerCase().trim()) {
     case 'int':
@@ -345,21 +366,95 @@ const transformValue = (value, dataType) => {
   }
 }
 
-const compareOutput = (pistonOutput, expectedOutput) => {
+//we compare the outputs and determine whether it matches the test case or not
+const compareOutput = (pistonOutput, expectedOutput, lastSubmission) => {
+  //first we need to check if the datatypes are correct or not
   try {
-    const actual = transformValue(pistonOutput, outputDataType)
-    const expected = transformValue(expectedOutput, outputDataType)
+    switch (outputDataType.toLowerCase().trim()) {
+      case 'int':
+        if (pistonOutput.includes('.') || expectedOutput.includes('.') || isNaN(pistonOutput) || isNaN(expectedOutput)) {
+          //if not we change the status of the last submission and return an error
+          lastSubmission.value.status = 'Invalid integer format in output.'
+          throw new Error('Invalid integer format in output.')
+        }
+        break;
+      case 'double':
+      case 'float':
+        if (isNaN(pistonOutput) || isNaN(expectedOutput)) {
+          lastSubmission.value.status = 'Invalid number format in output.'
+          throw new Error('Invalid number format in output.')
+        }
+        break
 
+      case 'boolean':
+        lastSubmission.value.status = 'Invalid boolean format in output.'
+        if (!['true', 'false'].includes(pistonOutput.trim().toLowerCase()) || !['true', 'false'].includes(expectedOutput.trim().toLowerCase())) {
+          lastSubmission.value.status = 'Invalid boolean format in output.'
+          throw new Error('Invalid boolean format in output.')
+        }
+        break
+
+      case 'string':
+        // no specific validation needed for strings
+        break
+
+      default:
+        throw new Error(`Unsupported output data type: ${outputDataType}`)
+    }
+
+    //afterwards we transform the values to their actual datatype and compare them
+  const actual = transformValue(pistonOutput, outputDataType)
+  const expected = transformValue(expectedOutput, outputDataType)
+
+  if (actual !== expected) {
+    //if they dont match we change the status of the last submission and return an error
+    lastSubmission.value.status = 'Output type mismatch.'
+    throw new Error('Output type mismatch.')
+  }
+    
+    //returns a boolean if they match or not
     return actual === expected
 
   } catch (error) {
-    console.error('compareOutput error:', error.message)
+    console.error('compareOutput error:', error.message) //oterwise if  there an another error we log it to the console and return false
     return false
   }
 }
 
 console.log(compareOutput("true", "true", "boolean")) //test for the compare output function
 console.log(compareOutput("true", "false", "boolean")) //test for the compare output function
+
+// Solution section
+
+const saveSolution = () => {
+  //if the same solution already exists we tell the user
+  for (let i = 0; i < savedSolutions.value.length; i++) {
+    if (savedSolutions.value[i].code === code.value && savedSolutions.value[i].language === language.value) {
+      window.alert('This solution is already saved.') 
+      return
+    }
+  }
+  //otherwise we save the solution in the saved solutions list
+  savedSolutions.value.push({
+    code: code.value,
+    language: language.value,
+    timestamp: new Date().toLocaleString() //serves as an id
+  });
+  alert('Solution saved successfully!')
+};
+
+
+//emit method from the previousSolutions component to delete a solution from the saved solutions list or import it to the editor
+const deleteSolution = (index) => {
+  savedSolutions.value.splice(index, 1);
+};
+
+const importSolution = (index) => {
+  //to import a solution we change the current code and language in the editor to the code and language of the imported solution
+  const solution = savedSolutions.value[index];
+  code.value = solution.code;
+  language.value = solution.language;
+};
 
 </script>
 
@@ -369,6 +464,7 @@ console.log(compareOutput("true", "false", "boolean")) //test for the compare ou
     <div :class="['toolbar d-flex align-items-center justify-content-between p-2', isDarkTheme ? 'bg-dark text-white' : 'bg-light text-dark']"
          :style="{ borderBottom: isDarkTheme ? '2px solid #2d2d2d' : '2px solid #e9ecef' }">
       <div class="d-flex align-items-center gap-3 flex-wrap">
+        <previousSolutions :savedSolutions="savedSolutions" @deleteSolution="deleteSolution" @importSolution="importSolution"/>
         
         <!-- Theme Selector -->
         <div class="d-flex align-items-center gap-2">
@@ -412,10 +508,12 @@ console.log(compareOutput("true", "false", "boolean")) //test for the compare ou
       </div>
       
       <!-- Run Button -->
+       <div class="d-flex align-items-center gap-2">
       <button @click="runCode" class="btn btn-success btn-sm px-4 py-1 fw-bold d-flex align-items-center gap-2 shadow run-btn rounded-pill border-0">
         <span class="d-none d-sm-inline">Run Code</span>
         <span class="d-inline d-sm-none">Run</span>
       </button>
+      </div>
     </div>
 
     <!-- Editor -->
@@ -442,24 +540,35 @@ console.log(compareOutput("true", "false", "boolean")) //test for the compare ou
     ></testCaseForm>
 
 
-    <div v-if="isSubmitting || statusMessage || errorMessage || lastSubmission"
+    <div v-if="isSubmitting || errorMessage || lastSubmission"
   :class="['submission-panel px-3 py-2 small border-top', resultPanelClass]">
 
-  <div v-if="isSubmitting">Running code on Piston...</div>
-  <div v-else-if="errorMessage">{{ errorMessage }}</div>
-  <div v-else-if="lastSubmission" class="result-stack">
+  <div v-if="isSubmitting">Running code on Piston...</div> <!-- if still submiting  the  code -->
+  <div v-else-if="errorMessage">{{ errorMessage }}</div> <!-- if there is an error -->
+  <div v-else-if="allTestCasesPassed">All test cases passed! <!-- if all test cases passed -->
+      <span v-if="totalExecutionTime">Total Time: {{ totalExecutionTime }}ms </span>
+      <span v-if="totalExecutionTime && submissionList"> Average Time: {{ totalExecutionTime / submissionList.length }}ms</span>
+    <div class="result-meta">
+      <span>Engine: Piston</span>
+      <span>Language: {{ lastSubmission.runtime ?? 'n/a' }}</span>
+      <span>Version: {{ lastSubmission.runtime_version ?? 'n/a' }}</span>
+      <span>Exit code: {{ lastSubmission.exit_code ?? 'n/a' }}</span>
+      <span>Signal: {{ lastSubmission.signal ?? 'none' }}</span>
+    </div>
+  </div>
+  <div v-else-if="lastSubmission" class="result-stack"> <!-- if there is a last submission(not all test cases passed ) -->
 
     <div class="result-summary">
-      {{ statusMessage }}
       Status: "{{ formatExecutionStatus(lastSubmission.status) }}"{{ formatRuntimeLabel(lastSubmission) }}.
       <span v-if="lastSubmission.wall_time">Time: {{ lastSubmission.wall_time }}ms</span>
       <p>Number of test cases passed {{submissionList.length}}</p>
     </div>
 
-    <div v-if="!MatchedOutput && failedTestCase!=null" class="result-summary">
+    <div v-if="!MatchedOutput && failedTestCase!=null" class="result-summary"><!-- we showcase the testcase that returned false -->
       <testCase @emitToDeleteToTestCaseForm="removeTestCase" :testCase="failedTestCase" :inputsNames="inputsNames" :InputsDataType="inputsDataType" :outputDataType="outputDataType"/>
     </div>
 
+    <!-- info about the last submission -->
     <div class="result-meta">
       <span>Engine: Piston</span>
       <span>Language: {{ lastSubmission.runtime ?? 'n/a' }}</span>
@@ -468,6 +577,7 @@ console.log(compareOutput("true", "false", "boolean")) //test for the compare ou
       <span>Signal: {{ lastSubmission.signal ?? 'none' }}</span>
     </div>
 
+    <!-- compiler vs actual output -->
     <div v-if="lastSubmission.compile_output" class="result-block">
       <div class="result-label">Compiler Output</div>
       <pre>{{ lastSubmission.compile_output }}</pre>
@@ -488,7 +598,7 @@ console.log(compareOutput("true", "false", "boolean")) //test for the compare ou
   </div>
 </template>
 
-<style scoped>
+<style>
 .editor-container {
   width: calc(100% - 1rem); /* Slight margin for better visual boundaries */
   transition: background-color 0.3s ease;

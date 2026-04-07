@@ -4,15 +4,6 @@
       <h1>AlgoByte</h1>
       <span class="edition">demo edition</span>
     </div>
-
-    <nav class="nav-bar">
-      <ul>
-        <li><router-link to="/">Home</router-link></li>
-        <li><router-link to="/editor">Editor</router-link></li>
-        <li><router-link to="/about">About</router-link></li>
-      </ul>
-      <button class="btn btn-primary">Login</button>
-    </nav>
   </header>
 </template>
 
