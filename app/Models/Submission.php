@@ -31,4 +31,9 @@ class Submission extends Model {
     public function problem() {
         return $this->belongsTo(Problem::class, 'problemId', 'problemId');
     }
+
+    public function scopeSuccessful($query)
+    {
+        return $query->where('status', 'Accepted');
+    }
 }

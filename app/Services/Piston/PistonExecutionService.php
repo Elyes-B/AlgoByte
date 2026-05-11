@@ -17,8 +17,8 @@ class PistonExecutionService
         $runtime = config("piston.runtimes.$language");
 
         if (! is_array($runtime)) {
-            return $this->result(   
-                status: 'runner_unavailable',
+            return $this->result(
+                status: 'Runner_unavailable',
                 message: 'Piston is not configured for the selected language.',
             );
         }
@@ -31,7 +31,7 @@ class PistonExecutionService
 
         if (! $response->successful()) {
             return $this->result(
-                status: 'runner_unavailable',
+                status: 'Failed',
                 message: $this->extractPistonError($response, 'Piston rejected the execution request.'),
             );
         }
@@ -76,7 +76,7 @@ class PistonExecutionService
         $runCode = $this->toNullableInt(data_get($payload, 'run.code'));
         $runStderr = $this->normalizeText(data_get($payload, 'run.stderr'));
         $runStdout = $this->normalizeText(data_get($payload, 'run.stdout'));
-        
+
         // Ensure version is picked up from response to be accurate
         $resolvedVersion = (string) data_get($payload, 'version', $runtime['version']);
         $resolvedLanguage = (string) data_get($payload, 'language', $runtime['language']);
@@ -84,7 +84,7 @@ class PistonExecutionService
         // Piston includes a 'compile' section if the language requires compilation.
         if (isset($payload['compile']) && $compileCode !== null && $compileCode !== 0) {
             return $this->result(
-                status: 'compile_error',
+                status: 'Failed',
                 message: 'Code compilation failed in Piston.',
                 stdout: null,
                 stderr: $compileStderr,
@@ -99,7 +99,7 @@ class PistonExecutionService
 
         if ($runCode === 0 && empty($runSignal)) {
             return $this->result(
-                status: 'completed',
+                status: 'Completed',
                 message: 'Code executed successfully through Piston.',
                 stdout: $runStdout,
                 stderr: $runStderr,
@@ -147,7 +147,7 @@ class PistonExecutionService
             $message = $exception->getMessage();
 
             return $this->result(
-                status: 'runner_unavailable',
+                status: 'Runner_unavailable',
                 message: 'Piston is unreachable at '.config('piston.base_url').'. Check your local Piston container status and try again.',
                 stderr: $message,
             );

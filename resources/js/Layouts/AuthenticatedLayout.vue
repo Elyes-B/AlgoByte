@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { App, Link } from '@inertiajs/vue3';
+import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 
 const showingNavigationDropdown = ref(false);
 const showingAccountDropdown = ref(false);
+
+
 </script>
 
 <template>
@@ -30,6 +33,9 @@ const showingAccountDropdown = ref(false);
                         <a href="#footer">
                             About
                         </a>
+                    </li>
+                    <li>
+                        <AuthBackgroundToggle />
                     </li>
                 </ul>
 
@@ -59,6 +65,9 @@ const showingAccountDropdown = ref(false);
                             class="account-dropdown-link logout-link"
                         >
                             Logout
+                        </Link>
+                        <Link :href="route('history.index')" class="account-dropdown-link">
+                        History
                         </Link>
                     </div>
                 </div>
@@ -92,6 +101,9 @@ const showingAccountDropdown = ref(false);
                 <Link :href="route('logout')" method="post" as="button">
                     Logout
                 </Link>
+                <Link :href="route('history.index')">
+                    History
+                </Link>
             </div>
         </div>
 
@@ -117,15 +129,21 @@ const showingAccountDropdown = ref(false);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background:
-        linear-gradient(rgba(56, 217, 255, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(56, 217, 255, 0.035) 1px, transparent 1px),
-        radial-gradient(circle at 88% 8%, rgba(24, 242, 195, 0.1), transparent 24%),
-        #05080d;
+    /* Use the variable for background and text */
+    background-color: var(--site-bg);
+    color: var(--site-text);
+
+    /* Update your gradient to use the opacity variable */
+    background-image:
+        linear-gradient(rgba(56, 217, 255, var(--grid-opacity)) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 217, 255, var(--grid-opacity)) 1px, transparent 1px),
+        radial-gradient(circle at 88% 8%, rgba(24, 242, 195, 0.1), transparent 24%);
     background-size: 28px 28px, 28px 28px, auto, auto;
-    color: var(--ab-text);
+
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Also make the header adapt */
 .header {
     position: sticky;
     top: 0;
@@ -133,28 +151,11 @@ const showingAccountDropdown = ref(false);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
     padding: 14px 32px;
     border-bottom: 1px solid var(--ab-border);
-    background: rgba(5, 8, 13, 0.88);
-    color: var(--ab-text);
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+    /* Make header slightly transparent version of the background */
+    background: var(--site-bg);
     backdrop-filter: blur(18px);
-}
-
-.header-title {
-    flex: 0 0 auto;
-    text-decoration: none;
-}
-
-.header-title h1 {
-    margin: 0;
-    color: #f3fbff;
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: 0;
-    text-shadow: 0 0 18px rgba(56, 217, 255, 0.35);
 }
 
 .edition {

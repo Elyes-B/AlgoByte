@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCodeSubmissionRequest;
 use App\Models\CodeSubmission;
+use App\Models\Submission;
 use App\Services\Piston\PistonExecutionService;
 use Illuminate\Http\JsonResponse;
 
@@ -19,7 +20,7 @@ class CodeSubmissionController extends Controller
         $code = $request->string('code')->toString();
         $result = $piston->execute($language, $code);
 
-        $submission = CodeSubmission::create([
+        $submission = Submission::create([
             'language' => $language,
             'code' => $code,
             ...$result->toDatabaseAttributes(),

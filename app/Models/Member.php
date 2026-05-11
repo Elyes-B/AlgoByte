@@ -34,4 +34,23 @@ public function discussions() {
 public function comments() {
     return $this->hasMany(Comment::class, 'userId', 'userId');
 }
+
+
+    public function solvedProblems()
+    {
+        return Problem::whereHas('submissions', function ($query) {
+            $query->where('userId', $this->userId)
+                  ->successful();
+        });
+    }
+
+    public function attemptedProblems()
+    {
+        return Problem::whereHas('submissions', function ($query) {
+            $query->where('userId', $this->userId);
+        })->whereDoesntHave('submissions', function ($query) {
+            $query->where('userId', $this->userId)
+                  ->successful();
+        });
+    }
 }

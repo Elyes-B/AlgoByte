@@ -19,4 +19,8 @@ class Problem extends Model {
     public function testCases() {
         return $this->hasMany(TestCase::class, 'problemId', 'problemId');
     }
+
+    public function submissions() {
+        return $this->hasMany(Submission::class, 'problemId', 'problemId');
+    }
 }

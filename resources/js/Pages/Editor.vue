@@ -95,7 +95,7 @@ const editorOptions = computed(() => ({
 }));
 
 const resultPanelClass = computed(() =>
-    errorMessage.value || !matchedOutput.value || ['compile_error', 'runtime_error', 'runner_unavailable'].includes(lastSubmission.value?.status)
+    errorMessage.value || !matchedOutput.value || ['compile_error', 'runtime_error', 'runner_unavailable','Failed'].includes(lastSubmission.value?.status)
         ? 'submission-panel-error'
         : 'submission-panel-success',
 );
@@ -217,27 +217,31 @@ const runCode = async () => {
 
             lastSubmission.value = submission;
 
-            if (submission.status !== 'completed') {
+            if (submission.status !== 'Completed') {
                 statusMessage.value = submission.status === 'runner_unavailable'
                     ? 'Piston is unavailable.'
                     : 'Code executed with errors.';
-                testCase.status = 'failed';
+                testCase.status = 'Failed';
                 failedTestCase.value = testCase.id === 'compile-only' ? null : testCase;
                 matchedOutput.value = false;
                 break;
             }
 
-            if (testCase.id === 'compile-only' || compareOutput(submission.stdout, testCase.output)) {
-                testCase.status = 'passed';
+            if (compareOutput(submission.stdout, testCase.output)) {
+                submission.status = 'Accepted';
+                testCase.status = 'Accepted';
                 submissionList.value.push(submission);
                 statusMessage.value = 'Code executed successfully.';
+                lastSubmission.value = submission;
                 continue;
             }
 
-            testCase.status = 'failed';
+            submission.status = 'Wrong Answer';
+            testCase.status = 'Wrong Answer';
             failedTestCase.value = testCase;
             matchedOutput.value = false;
             statusMessage.value = 'Code executed but the output did not match the expected output.';
+            lastSubmission.value = submission;
             break;
         }
     } catch (error) {
