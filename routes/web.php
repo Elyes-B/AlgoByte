@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminProblemController;
 use App\Http\Controllers\Api\HistoryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -62,11 +64,20 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     // The View-Only Dashboard
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/users/{username}', [ProfileController::class, 'show'])->name('profile.show');
 
     // The Settings / Edit Forms
     Route::get('/settings', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/settings', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/settings', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/problems', [AdminProblemController::class, 'index'])->name('problems.index');
+        Route::patch('/problems/{problem}/status', [AdminProblemController::class, 'updateStatus'])->name('problems.updateStatus');
+    });
+
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])
+        ->name('notifications.destroy');
 });
 
 Route::get('/profile/history', [HistoryController::class, 'renderHistoryPage'])->name('history.index');

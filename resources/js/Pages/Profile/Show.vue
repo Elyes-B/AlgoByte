@@ -22,7 +22,7 @@ const getAvatar = (member) => {
         <div class="profile-container">
             <div class="profile-hero">
                 <div class="banner-wrapper">
-                    <img v-if="member.background_image"
+                    <img v-if="getBanner(member)"
                          :src="member.background_image"
                          alt="Background"
                          class="banner-img" />
