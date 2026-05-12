@@ -129,7 +129,7 @@ const getAvatar = (member) => {
             <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
                 History
             </Link>
-            <Link v-if="$page.props.auth.member.is_admin" :href="route('admin.problems.index')" class="account-dropdown-link">
+            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.problems.index')" class="account-dropdown-link">
                 Admin Panel
             </Link>
             <Link
