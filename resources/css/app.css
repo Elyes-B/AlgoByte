@@ -24,21 +24,6 @@
     --auth-page-bg-size: 30px 30px, 30px 30px, auto;
 }
 
-:root[data-auth-bg='dark'] {
-    --auth-page-bg:
-        linear-gradient(rgba(56, 217, 255, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(56, 217, 255, 0.035) 1px, transparent 1px),
-        radial-gradient(circle at left, #0a1a2f, #02060d);
-    --auth-page-bg-size: 28px 28px, 28px 28px, auto;
-}
-
-:root[data-auth-bg='blue'] {
-    --auth-page-bg:
-        radial-gradient(circle at 18% 18%, rgba(0, 234, 255, 0.28), transparent 30%),
-        radial-gradient(circle at 86% 12%, rgba(123, 227, 239, 0.3), transparent 28%),
-        linear-gradient(135deg, #e7fbff 0%, #bfefff 48%, #f7fdff 100%);
-    --auth-page-bg-size: auto, auto, auto;
-}
 
 html {
     background: var(--ab-bg);

@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from 'vue';
-import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineProps({
     canResetPassword: {
@@ -29,15 +29,9 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Log in" />
+    <AuthenticatedLayout>
 
     <div class="login-page">
-        <AuthBackgroundToggle />
-
-        <Link href="/" class="logo">
-            <h1>ALGOBYTE</h1>
-            <span>PRECISION MONOLITH</span>
-        </Link>
 
         <section class="login-card">
             <h2>Login</h2>
@@ -116,6 +110,7 @@ const submit = () => {
             </p>
         </section>
     </div>
+    </AuthenticatedLayout>
 </template>
 
 <style scoped>
@@ -126,7 +121,6 @@ const submit = () => {
     align-items: center;
     position: relative;
     padding: 92px 20px 32px;
-    background: var(--auth-page-bg);
     background-size: var(--auth-page-bg-size);
     font-family: Arial, sans-serif;
 }

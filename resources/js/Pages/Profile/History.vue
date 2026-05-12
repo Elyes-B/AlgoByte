@@ -75,7 +75,7 @@ onMounted(() => fetchProblems());
                         <span class="text-gray-600 font-black uppercase tracking-widest">No Records Found</span>
                     </div>
 
-                    <div
+                    <div v-else
                         v-for="problem in problems"
                         :key="problem.id"
                         class="glass-card group flex items-center justify-between p-6 rounded-xl border border-[#1a2b3c] hover:border-[#38d9ff]/30 transition-all duration-500"
@@ -88,7 +88,7 @@ onMounted(() => fetchProblems());
                                 </h3>
                             </div>
                             <div class="flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                <span class="text-gray-400">ID: #{{ problem.id }}</span>
+                                <span class="text-gray-400">ID: #{{ problem.problemId }}</span>
                                 <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
                                 <span>Author: {{ problem.creatorId }}</span>
                                 <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
@@ -97,7 +97,7 @@ onMounted(() => fetchProblems());
                         </div>
 
                         <a
-                            :href="`/problems/${problem.id}`"
+                            :href="`/problems/${problem.problemId}`"
                             class="solve-btn"
                         >
                             Open Details

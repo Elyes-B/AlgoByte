@@ -10,7 +10,7 @@ class HistoryProblemResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->problemId,
+            'problemId' => $this->problemId,
             'title' => $this->title,
             'difficulty' => ucfirst($this->difficulty),
             'status' => $this->status,

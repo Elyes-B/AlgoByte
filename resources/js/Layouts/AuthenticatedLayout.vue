@@ -30,47 +30,55 @@ const showingAccountDropdown = ref(false);
                         </Link>
                     </li>
                     <li>
-                        <a href="#footer">
-                            About
-                        </a>
-                    </li>
-                    <li>
                         <AuthBackgroundToggle />
                     </li>
                 </ul>
 
                 <div class="account-menu">
-                    <button
-                        type="button"
-                        class="account-trigger"
-                        @click="showingAccountDropdown = !showingAccountDropdown"
-                    >
-                        <span class="account-avatar">
-                            {{ $page.props.auth.member.username.charAt(0).toUpperCase() }}
-                        </span>
-                        <span class="account-name">
-                            {{ $page.props.auth.member.username }}
-                        </span>
-                        <span class="account-chevron">v</span>
-                    </button>
+    <template v-if="$page.props.auth.member">
+        <button
+            type="button"
+            class="account-trigger"
+            @click="showingAccountDropdown = !showingAccountDropdown"
+        >
+            <span class="account-avatar">
+                {{ $page.props.auth.member.username.charAt(0).toUpperCase() }}
+            </span>
+            <span class="account-name">
+                {{ $page.props.auth.member.username }}
+            </span>
+            <span class="account-chevron">v</span>
+        </button>
 
-                    <div v-if="showingAccountDropdown" class="account-dropdown">
-                        <Link :href="route('profile.edit')" class="account-dropdown-link">
-                            Profile
-                        </Link>
-                        <Link
-                            :href="route('logout')"
-                            method="post"
-                            as="button"
-                            class="account-dropdown-link logout-link"
-                        >
-                            Logout
-                        </Link>
-                        <Link :href="route('history.index')" class="account-dropdown-link">
-                        History
-                        </Link>
-                    </div>
-                </div>
+        <div v-if="showingAccountDropdown" class="account-dropdown">
+            <Link :href="route('profile.show')" class="account-dropdown-link">
+                Profile
+            </Link>
+            <Link :href="route('history.index')" class="account-dropdown-link">
+                History
+            </Link>
+            <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="account-dropdown-link logout-link"
+            >
+                Logout
+            </Link>
+        </div>
+    </template>
+
+    <template v-else>
+        <div class="auth-buttons">
+            <Link :href="route('login')" class="account-link">
+                Log in
+            </Link>
+            <Link :href="route('register')" class="account-link">
+                Register
+            </Link>
+        </div>
+    </template>
+</div>
             </div>
 
             <button
@@ -90,12 +98,9 @@ const showingAccountDropdown = ref(false);
             <Link :href="route('editor')" :class="{ active: route().current('editor') }">
                 Editor
             </Link>
-            <a href="#footer">
-                About
-            </a>
             <div class="mobile-account">
                 <p>{{ $page.props.auth.member.username }}</p>
-                <Link :href="route('profile.edit')">
+                <Link :href="route('profile.show')">
                     Profile
                 </Link>
                 <Link :href="route('logout')" method="post" as="button">
@@ -354,6 +359,17 @@ const showingAccountDropdown = ref(false);
     padding: 22px 24px;
 }
 
+.account-link{
+    padding: 8px 18px;
+    margin-right: 5px;
+    border: 1px solid var(--ab-border);
+    border-radius: 8px;
+    background: rgba(11, 22, 34, 0.82);
+    color: var(--ab-text);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 .app-main {
     flex: 1;
 }

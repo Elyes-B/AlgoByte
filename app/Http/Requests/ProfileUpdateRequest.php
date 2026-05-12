@@ -20,21 +20,16 @@ public function rules(): array
 {
     return [
         'username' => [
-            'required',
-            'string',
-            'lowercase',
-            'max:255',
-            // This checks the 'members' table for uniqueness but ignores the current user
+            'required', 'string', 'lowercase', 'max:50',
             Rule::unique('members', 'username')->ignore($this->user()->userId, 'userId'),
         ],
         'email' => [
-            'required',
-            'string',
-            'lowercase',
-            'email',
-            'max:255',
+            'required', 'string', 'lowercase', 'email', 'max:100',
             Rule::unique('members', 'email')->ignore($this->user()->userId, 'userId'),
         ],
+        // Allow these to be images
+        'profile_image' => ['nullable', 'image', 'max:2048'], // Max 2MB
+        'background_image' => ['nullable', 'image', 'max:5120'], // Max 5MB
     ];
 }
 }
