@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminProblemController;
 use App\Http\Controllers\Api\HistoryController;
-use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -63,7 +63,6 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
     // The View-Only Dashboard
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/users/{username}', [ProfileController::class, 'show'])->name('profile.show');
 
     // The Settings / Edit Forms
@@ -80,6 +79,7 @@ Route::middleware('auth')->group(function () {
         ->name('notifications.destroy');
 });
 
-Route::get('/profile/history', [HistoryController::class, 'renderHistoryPage'])->name('history.index');
+Route::get('/users/{username}/history', [HistoryController::class, 'renderHistoryPage'])
+    ->name('history.index');
 
 require __DIR__.'/auth.php';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Member;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,12 +18,18 @@ class ProfileController extends Controller
     /**
      * Display the user's public-facing profile dashboard.
      */
-    public function show(Request $request): Response
-    {
-        return Inertia::render('Profile/Show', [
-            'member' => $request->user(),
-        ]);
-    }
+
+public function show(Request $request, Member $username): Response
+{
+    // Rename it internally so your Inertia call stays clean
+    $member = $username;
+
+    return Inertia::render('Profile/Show', [
+        'member' => $member,
+        'isOwner' => $request->user() && $request->user()->userId === $member->userId,
+    ]);
+}
+
 
     /**
      * Display the user's settings/edit form.

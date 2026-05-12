@@ -1,83 +1,73 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 
 const props = defineProps({
-  userId: { type: Number, required: true }
+    targetMember: Object,
+    problems: Object, // This is now a paginated Laravel object (has .data and .links)
+    currentTab: String,
+    isOwner: Boolean
 });
 
-const currentTab = ref('solved');
-const problems = ref([]);
-const meta = ref({});
-const loading = ref(false);
+// Navigation Logic using Inertia Router
+const switchTab = (tabName) => {
+    router.get(route('history.index', props.targetMember.username),
+        { tab: tabName },
+        { preserveState: true, preserveScroll: true }
+    );
+};
 
-// Match your Figma tab styling
+const changePage = (url) => {
+    if (url) {
+        router.get(url, {}, { preserveState: true, preserveScroll: true });
+    }
+};
+
+// CSS Class Helpers
 const tabClass = (isActive) => [
-  'pb-4 text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 border-b-2',
+  'pb-4 text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 border-b-2 bg-transparent cursor-pointer',
   isActive
     ? 'text-[#38d9ff] border-[#38d9ff] drop-shadow-[0_0_10px_rgba(56,217,255,0.5)]'
     : 'text-gray-500 border-transparent hover:text-gray-300'
 ];
 
-// Difficulty badges from the Problem Dashboard
 const difficultyClass = (difficulty) => {
   const base = 'px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ';
   if (difficulty === 'Easy') return base + 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20';
   if (difficulty === 'Medium') return base + 'bg-amber-500/5 text-amber-400 border-amber-500/20';
   return base + 'bg-rose-500/5 text-rose-400 border-rose-500/20';
 };
-
-const fetchProblems = async (page = 1) => {
-  loading.value = true;
-  try {
-    const response = await axios.get(`/api/v1/users/${props.userId}/history/${currentTab.value}?page=${page}`);
-    problems.value = response.data.data;
-    meta.value = response.data.meta;
-  } catch (error) {
-    console.error("History fetch failed", error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-watch(currentTab, () => fetchProblems(1));
-onMounted(() => fetchProblems());
 </script>
 
 <template>
-    <Head title="Activity History" />
+    <Head :title="`${targetMember.username}'s History`" />
 
     <AuthenticatedLayout>
-
         <div class="py-10 px-6">
             <div class="max-w-6xl mx-auto">
+                <h1 class="text-white title">History of {{ targetMember.username }}</h1>
 
-                <div class="flex space-x-10 border-b border-[#1a2b3c] mb-10" id="selectOptions" >
-                    <button @click="currentTab = 'solved'" :class="tabClass(currentTab === 'solved')">
+                <div class="flex space-x-10 border-b border-[#1a2b3c] mb-10" id="selectOptions">
+                    <button @click="switchTab('solved')" :class="tabClass(currentTab === 'solved')">
                         Solved
                     </button>
-                    <button @click="currentTab = 'created'" :class="tabClass(currentTab === 'created')">
+                    <button @click="switchTab('created')" :class="tabClass(currentTab === 'created')">
                         Authored
                     </button>
-                    <button @click="currentTab = 'attempted'" :class="tabClass(currentTab === 'attempted')">
+                    <button @click="switchTab('attempted')" :class="tabClass(currentTab === 'attempted')">
                         Attempts
                     </button>
                 </div>
 
                 <div class="grid gap-4">
-                    <div v-if="loading" class="flex justify-center py-32">
-                        <div class="w-8 h-8 border-2 border-[#38d9ff]/20 border-t-[#38d9ff] rounded-full animate-spin"></div>
-                    </div>
-
-                    <div v-else-if="problems.length === 0" class="glass-card p-20 text-center border border-[#1a2b3c] rounded-2xl">
+                    <div v-if="problems.data.length === 0" class="glass-card p-20 text-center border border-[#1a2b3c] rounded-2xl">
                         <span class="text-gray-600 font-black uppercase tracking-widest">No Records Found</span>
                     </div>
 
                     <div v-else
-                        v-for="problem in problems"
-                        :key="problem.id"
+                        v-for="problem in problems.data"
+                        :key="problem.problemId"
                         class="glass-card group flex items-center justify-between p-6 rounded-xl border border-[#1a2b3c] hover:border-[#38d9ff]/30 transition-all duration-500"
                     >
                         <div class="flex flex-col gap-2">
@@ -90,21 +80,34 @@ onMounted(() => fetchProblems());
                             <div class="flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                                 <span class="text-gray-400">ID: #{{ problem.problemId }}</span>
                                 <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
-                                <span>Author: {{ problem.creatorId }}</span>
+                                <span>Status: {{ problem.status }}</span>
                                 <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
-                                <span>Solved on {{ problem.created_at }}</span>
+                                <span>Activity: {{ new Date(problem.created_at).toLocaleDateString() }}</span>
                             </div>
                         </div>
 
-                        <a
-                            :href="`/problems/${problem.problemId}`"
-                            class="solve-btn"
-                        >
+                        <a :href="`/problems/${problem.problemId}`" class="solve-btn">
                             Open Details
                         </a>
                     </div>
                 </div>
 
+                <div v-if="problems.links.length > 3" class="mt-10 flex justify-center gap-2">
+                    <button
+                        v-for="(link, index) in problems.links"
+                        :key="index"
+                        @click="changePage(link.url)"
+                        v-html="link.label"
+                        class="px-4 py-2 text-xs font-black uppercase rounded-lg border transition-all duration-200"
+                        :class="[
+                            link.active
+                                ? 'bg-[#38d9ff] text-[#05080d] border-[#38d9ff]'
+                                : 'bg-transparent text-gray-500 border-[#1a2b3c] hover:border-[#38d9ff] hover:text-[#38d9ff]',
+                            !link.url ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'
+                        ]"
+                        :disabled="!link.url"
+                    />
+                </div>
 
             </div>
         </div>
@@ -129,6 +132,14 @@ onMounted(() => fetchProblems());
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.title {
+    font-size: 32px;
+    font-weight: 900;
+    color: white;
+    margin: 0 0 20px;
 }
 
 .solve-btn:hover {
@@ -136,30 +147,5 @@ onMounted(() => fetchProblems());
     color: #05080d;
     box-shadow: 0 0 20px rgba(56, 217, 255, 0.4);
     transform: translateY(-2px);
-}
-
-.nav-btn {
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #4b5563;
-    transition: color 0.2s;
-}
-
-.nav-btn:hover:not(:disabled) {
-    color: #38d9ff;
-}
-
-.nav-btn:disabled {
-    opacity: 0.2;
-    cursor: not-allowed;
-}
-#selectOptions button {
-    padding: 8px 18px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
 }
 </style>

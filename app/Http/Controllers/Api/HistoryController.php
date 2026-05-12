@@ -58,14 +58,28 @@ public function solvedProblems(Request $request, $userId)
         return response()->json($problems);
     }
 
-    public function renderHistoryPage()
+public function renderHistoryPage(Request $request, Member $username)
 {
-    // Ensure the user is logged in
-    $userId = Auth::id();
+    $targetMember = $username;
 
-    // Return the blade view and pass the userId as a prop
+    // Determine which tab we are on (default to 'created')
+    $tab = $request->query('tab', 'created');
+
+    if ($tab === 'solved') {
+        $problems = $targetMember->solvedProblems()->paginate(10);
+    } else {
+        // Show accepted problems created by this user
+        $problems = $targetMember->problems()
+            ->where('status', 'Accepted')
+            ->latest()
+            ->paginate(10);
+    }
+
     return Inertia::render('Profile/History', [
-        'userId' => $userId,
+        'targetMember' => $targetMember,
+        'problems' => $problems, // This now contains the data and meta (pagination)
+        'currentTab' => $tab,
+        'isOwner' => $request->user() && $request->user()->userId === $targetMember->userId,
     ]);
 }
 }

@@ -123,11 +123,14 @@ const getAvatar = (member) => {
         </button>
 
         <div v-if="showingAccountDropdown" class="account-dropdown">
-            <Link :href="route('profile.show')" class="account-dropdown-link">
+            <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
                 Profile
             </Link>
-            <Link :href="route('history.index')" class="account-dropdown-link">
+            <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
                 History
+            </Link>
+            <Link v-if="$page.props.auth.member.is_admin" :href="route('admin.problems.index')" class="account-dropdown-link">
+                Admin Panel
             </Link>
             <Link
                 :href="route('logout')"
@@ -173,15 +176,16 @@ const getAvatar = (member) => {
             </Link>
             <div class="mobile-account">
                 <p>{{ $page.props.auth.member.username }}</p>
-                <Link :href="route('profile.show')">
+                <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
                     Profile
+                </Link>
+                <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
+                    History
                 </Link>
                 <Link :href="route('logout')" method="post" as="button">
                     Logout
                 </Link>
-                <Link :href="route('history.index')">
-                    History
-                </Link>
+
             </div>
         </div>
 

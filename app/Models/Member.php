@@ -58,4 +58,9 @@ public function comments() {
     {
         return $this->hasMany(Notification::class, 'user_id', 'userId');
     }
+
+    public function getRouteKeyName(): string
+{
+    return 'username';
+}
 }

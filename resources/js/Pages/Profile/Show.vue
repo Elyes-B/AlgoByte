@@ -3,7 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
-    member: { type: Object, required: true }
+    member: { type: Object, required: true },
+    isOwner: { type: Boolean, default: false } // Add this line
 });
 
 const getBanner = (member) => member.background_image || '';
@@ -39,20 +40,27 @@ const getAvatar = (member) => {
 
                         <div class="user-meta">
                             <h1 class="username">{{ member.username }}</h1>
-                            <p class="user-email">{{ member.email }}</p>
+                            <p v-if="isOwner" class="user-email">{{ member.email }}</p>
                         </div>
                     </div>
 
                    <div class="profile-actions">
-    <Link :href="route('profile.edit')" class="edit-btn">
+    <Link
+        v-if="isOwner"
+        :href="route('profile.edit')"
+        class="edit-btn"
+    >
         <i class="bi bi-pencil-square"></i>
-        <span>Edit Profile</span>
+        Edit Profile
     </Link>
 
-    <Link :href="route('history.index')" class="edit-btn">
-        <i class="bi bi-clock-history"></i>
-        <span>View History</span>
-    </Link>
+    <Link
+    :href="route('history.index', member.username)"
+    class="edit-btn"
+>
+    <i class="bi bi-clock-history"></i>
+    View History
+</Link>
 </div>
                 </div>
             </div>
