@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\HistoryProblemResource;
@@ -19,29 +19,28 @@ class HistoryController extends Controller
     {
         $member = Member::findOrFail($userId);
 
-        // Use the relationship defined in Member.php
         $problems = $member->problems()
+            ->with('creator')
             ->latest()
             ->paginate(15);
 
-        return response()->json($problems);
+        return HistoryProblemResource::paginatedProblemResponse($problems);
     }
 
     /**
      * Get problems successfully solved by the user.
      */
-public function solvedProblems(Request $request, $userId)
-{
-    $member = Member::findOrFail($userId);
+    public function solvedProblems(Request $request, $userId): JsonResponse
+    {
+        $member = Member::findOrFail($userId);
 
-    $problems = $member->solvedProblems()
-        ->with('creator')
-        ->latest()
-        ->paginate(15);
+        $problems = $member->solvedProblems()
+            ->with('creator')
+            ->latest()
+            ->paginate(15);
 
-    // This wraps the paginated collection in our new Resource
-    return HistoryProblemResource::collection($problems);
-}
+        return HistoryProblemResource::paginatedProblemResponse($problems);
+    }
 
     /**
      * Get problems the user attempted but hasn't solved yet.
@@ -55,31 +54,17 @@ public function solvedProblems(Request $request, $userId)
             ->latest()
             ->paginate(15);
 
-        return response()->json($problems);
+        return HistoryProblemResource::paginatedProblemResponse($problems);
     }
 
-public function renderHistoryPage(Request $request, Member $username)
-{
-    $targetMember = $username;
+    public function renderHistoryPage()
+    {
+        $userId = Auth::id();
 
-    // Determine which tab we are on (default to 'created')
-    $tab = $request->query('tab', 'created');
-
-    if ($tab === 'solved') {
-        $problems = $targetMember->solvedProblems()->paginate(10);
-    } else {
-        // Show accepted problems created by this user
-        $problems = $targetMember->problems()
-            ->where('status', 'Accepted')
-            ->latest()
-            ->paginate(10);
+        return Inertia::render('Profile/History', [
+            'userId' => $userId,
+        ]);
     }
 
-    return Inertia::render('Profile/History', [
-        'targetMember' => $targetMember,
-        'problems' => $problems, // This now contains the data and meta (pagination)
-        'currentTab' => $tab,
-        'isOwner' => $request->user() && $request->user()->userId === $targetMember->userId,
-    ]);
-}
+    
 }
