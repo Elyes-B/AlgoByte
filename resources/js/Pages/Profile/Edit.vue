@@ -22,7 +22,7 @@ defineProps({
                     <h1 class="settings-title">Account Settings</h1>
                     <p class="settings-subtitle">Manage your profile, security, and account preferences.</p>
                 </div>
-                <Link :href="route('profile.show')" class="back-to-profile">
+                <Link :href="route('profile.show', member.username)" class="back-to-profile">
                     View Public Profile
                 </Link>
             </header>
