@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head,Link } from '@inertiajs/vue3';
 
 defineProps({
     mustVerifyEmail: {
@@ -11,6 +11,9 @@ defineProps({
     },
     status: {
         type: String,
+    },
+    member: {
+        type: Object,
     },
 });
 </script>
@@ -55,6 +58,7 @@ defineProps({
                     <DeleteUserForm class="max-w-xl" />
                 </div>
             </div>
+        </div>
         </div>
     </AuthenticatedLayout>
 </template>
