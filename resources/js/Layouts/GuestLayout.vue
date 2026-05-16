@@ -5,6 +5,8 @@ import { Link } from '@inertiajs/vue3';
 
 <template>
     <div class="auth-page">
+        <AuthBackgroundToggle />
+
         <div class="auth-shell">
             <section class="auth-brand">
                 <Link href="/" class="brand-mark">

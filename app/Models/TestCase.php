@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class TestCase extends Model
 {
     use SoftDeletes;
-    use HasFactory; // Add this
+    use HasFactory; // Add thi-s
     protected $primaryKey = 'testCaseId';
 
     protected $fillable = [
