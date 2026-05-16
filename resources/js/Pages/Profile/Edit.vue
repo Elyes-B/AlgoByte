@@ -19,7 +19,6 @@ defineProps({
     <Head title="Profile" />
 
     <AuthenticatedLayout>
-<<<<<<< HEAD
         <div class="settings-container">
             <header class="settings-header">
                 <div>
@@ -30,15 +29,6 @@ defineProps({
                     View Public Profile
                 </Link>
             </header>
-=======
-        <template #header>
-            <h2
-                class="text-xl font-semibold leading-tight text-gray-800"
-            >
-                Profile
-            </h2>
-        </template>
->>>>>>> 8c6c6c9e418e91cbb0e3827055b0cef4426f6139
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
