@@ -2,126 +2,116 @@
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
-    member: { type: Object, required: true },
+    mustVerifyEmail: {
+        type: Boolean,
+    },
+    status: {
+        type: String,
+    },
+    member: {
+        type: Object,
+        required: true,
+    },
 });
 
-// Track the last uploaded file metadata to prevent duplicates
-const lastUploads = ref({
-    profile_image: { name: '', size: 0 },
-    background_image: { name: '', size: 0 }
-});
-
-const profilePreview = ref(props.member.profile_image);
-const backgroundPreview = ref(props.member.background_image);
 
 const form = useForm({
-    _method: 'PATCH',
     username: props.member.username,
     email: props.member.email,
-    profile_image: null,
-    background_image: null,
 });
 
-const onFileChange = (e, type) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    form[type] = file;
-
-    const reader = new FileReader();
-    reader.onload = (f) => {
-        if (type === 'profile_image') profilePreview.value = f.target.result;
-        if (type === 'background_image') backgroundPreview.value = f.target.result;
-    };
-    reader.readAsDataURL(file);
-};
-
-const submit = () => {
-    form.post(route('profile.update'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            // Update "Last Upload" tracking on success
-            if (form.profile_image) {
-                lastUploads.value.profile_image = {
-                    name: form.profile_image.name,
-                    size: form.profile_image.size
-                };
-            }
-            if (form.background_image) {
-                lastUploads.value.background_image = {
-                    name: form.background_image.name,
-                    size: form.background_image.size
-                };
-            }
-
-            // CRITICAL: Clear the files from the form so they aren't re-uploaded
-            // on the next submission (e.g., if the user just changes their name)
-            form.profile_image = null;
-            form.background_image = null;
-        },
-    });
+const updateProfile = () => {
+    console.log('Updating profile with:', form);
+    form.patch(route('profile.update'));
 };
 </script>
 
 <template>
     <section>
         <header>
-            <h2 class="text-xl font-bold text-white">Profile Assets</h2>
-            <p class="mt-1 text-sm text-gray-400">Update your public avatar and profile banner.</p>
+            <h2 class="text-lg font-medium text-gray-900">
+                Profile Information
+            </h2>
+
+            <p class="mt-1 text-sm text-gray-600">
+                Update your account's profile information and email address.
+            </p>
         </header>
 
-        <form @submit.prevent="submit" class="mt-6 space-y-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="flex flex-col items-center p-4 border border-gray-800 rounded-xl bg-black/20">
-                    <InputLabel value="Profile Picture" class="mb-4" />
-                    <div class="relative group cursor-pointer" @click="$refs.profileInput.click()">
-                        <img :src="profilePreview || `https://ui-avatars.com/api/?name=${form.username}`"
-                             class="w-32 h-32 rounded-2xl object-cover border-2 border-cyan-500/50 group-hover:opacity-75 transition" />
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                            <span class="text-xs font-bold text-white uppercase">Change</span>
-                        </div>
-                    </div>
-                    <input type="file" ref="profileInput" class="hidden" @change="onFileChange($event, 'profile_image')" accept="image/*" />
-                    <InputError :message="form.errors.profile_image" class="mt-2" />
-                </div>
+        <form
+            @submit.prevent="form.patch(route('profile.update'))"
+            class="mt-6 space-y-6"
+        >
+            <div>
+    <InputLabel for="username" value="Username" />
 
-                <div class="flex flex-col items-center p-4 border border-gray-800 rounded-xl bg-black/20">
-                    <InputLabel value="Profile Banner" class="mb-4" />
-                    <div class="w-full h-32 relative group cursor-pointer rounded-xl overflow-hidden border-2 border-gray-800" @click="$refs.bgInput.click()">
-                        <img v-if="backgroundPreview" :src="backgroundPreview" class="w-full h-full object-cover group-hover:opacity-75 transition" />
-                        <div v-else class="w-full h-full bg-gray-900"></div>
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                            <span class="text-xs font-bold text-white uppercase">Upload Banner</span>
-                        </div>
-                    </div>
-                    <input type="file" ref="bgInput" class="hidden" @change="onFileChange($event, 'background_image')" accept="image/*" />
-                    <InputError :message="form.errors.background_image" class="mt-2" />
-                </div>
+    <TextInput
+        id="username"
+        type="text"
+        class="mt-1 block w-full"
+        v-model="form.username" required
+        autofocus
+        autocomplete="username"
+    />
+
+    <InputError class="mt-2" :message="form.errors.username" />
+</div>
+
+            <div>
+                <InputLabel for="email" value="Email" />
+
+                <TextInput
+                    id="email"
+                    type="email"
+                    class="mt-1 block w-full"
+                    v-model="form.email"
+                    required
+                    autocomplete="username"
+                />
+
+                <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                <div>
-                    <InputLabel for="username" value="Username" />
-                    <TextInput id="username" v-model="form.username" class="mt-1 block w-full" />
-                    <InputError :message="form.errors.username" />
-                </div>
-                <div>
-                    <InputLabel for="email" value="Email" />
-                    <TextInput id="email" v-model="form.email" class="mt-1 block w-full" />
-                    <InputError :message="form.errors.email" />
+            <div v-if="mustVerifyEmail && member.email_verified_at === null">
+                <p class="mt-2 text-sm text-gray-800">
+                    Your email address is unverified.
+                    <Link
+                        :href="route('verification.send')"
+                        method="post"
+                        as="button"
+                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >
+                        Click here to re-send the verification email.
+                    </Link>
+                </p>
+
+                <div
+                    v-show="status === 'verification-link-sent'"
+                    class="mt-2 text-sm font-medium text-green-600"
+                >
+                    A new verification link has been sent to your email address.
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save Profile</PrimaryButton>
-                <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
-                    <p v-if="form.recentlySuccessful" class="text-sm text-green-400">Changes saved successfully.</p>
+                <PrimaryButton :disabled="form.processing" @click="updateProfile">Save</PrimaryButton>
+
+                <Transition
+                    enter-active-class="transition ease-in-out"
+                    enter-from-class="opacity-0"
+                    leave-active-class="transition ease-in-out"
+                    leave-to-class="opacity-0"
+                >
+                    <p
+                        v-if="form.recentlySuccessful"
+                        class="text-sm text-gray-600"
+                    >
+                        Saved.
+                    </p>
                 </Transition>
             </div>
         </form>

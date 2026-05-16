@@ -34,9 +34,6 @@ class HandleInertiaRequests extends Middleware
         'auth' => [
             // Change 'user' to 'member' to match your Vue component
             'member' => $request->user(),
-            'notifications' => $request->user()
-        ? $request->user()->notifications()->latest()->get()
-        : [],
         ],
         'executionResult' => fn () => $request->session()->get('executionResult'),
     ];

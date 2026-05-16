@@ -3,43 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Models\Member;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProfileController extends Controller
 {
     /**
-     * Display the user's public-facing profile dashboard.
-     */
-
-public function show(Request $request, Member $username): Response
-{
-    // Rename it internally so your Inertia call stays clean
-    $member = $username;
-
-    return Inertia::render('Profile/Show', [
-        'member' => $member,
-        'isOwner' => $request->user() && $request->user()->userId === $member->userId,
-    ]);
-}
-
-
-    /**
-     * Display the user's settings/edit form.
+     * Display the user's profile form.
      */
     public function edit(Request $request): Response
     {
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
-            'member' => $request->user(),
+            'member' => $request->user(), // Pass the authenticated member to the view
         ]);
     }
 
@@ -47,42 +29,17 @@ public function show(Request $request, Member $username): Response
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
-{
-    $user = $request->user();
+    {
+        $request->user()->fill($request->validated());
 
-    // 1. Only grab username and email from validated data initially
-    $user->fill($request->safe()->only(['username', 'email']));
-
-    if ($user->isDirty('email')) {
-        $user->email_verified_at = null;
-    }
-
-    // 2. Handle Profile Image: ONLY update if a file is actually present
-    if ($request->hasFile('profile_image')) {
-        if ($user->profile_image) {
-            $oldPath = str_replace(Storage::disk('supabase')->url(''), '', $user->profile_image);
-            Storage::disk('supabase')->delete($oldPath);
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
         }
 
-        $path = $request->file('profile_image')->store('profiles', 'supabase');
-        $user->profile_image = Storage::disk('supabase')->url($path);
+        $request->user()->save();
+
+        return Redirect::route('profile.edit');
     }
-
-    // 3. Handle Background Image: ONLY update if a file is actually present
-    if ($request->hasFile('background_image')) {
-        if ($user->background_image) {
-            $oldPath = str_replace(Storage::disk('supabase')->url(''), '', $user->background_image);
-            Storage::disk('supabase')->delete($oldPath);
-        }
-
-        $path = $request->file('background_image')->store('backgrounds', 'supabase');
-        $user->background_image = Storage::disk('supabase')->url($path);
-    }
-
-    $user->save();
-
-    return Redirect::route('profile.edit');
-}
 
     /**
      * Delete the user's account.
@@ -94,7 +51,9 @@ public function show(Request $request, Member $username): Response
         ]);
 
         $user = $request->user();
+
         Auth::logout();
+
         $user->delete();
 
         $request->session()->invalidate();
