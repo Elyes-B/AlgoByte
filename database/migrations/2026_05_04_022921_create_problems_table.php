@@ -23,9 +23,11 @@ return new class extends Migration
         $table->string('visibility', 20)->default('public');
         $table->text('solution')->nullable();
         $table->text('explanation')->nullable();
+        $table->timestamp('email_verified_at')->nullable();
 
         $table->softDeletes();
         $table->timestamps();
+
     });
 }
 
