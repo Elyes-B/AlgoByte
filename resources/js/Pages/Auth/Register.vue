@@ -1,6 +1,6 @@
 <script setup>
-import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 import InputError from '@/Components/InputError.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
@@ -18,12 +18,8 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Register" />
-
+<AuthenticatedLayout>
     <div class="register-page">
-        <AuthBackgroundToggle />
-
-        <Link href="/" class="logo">ALGO BYTE</Link>
 
         <section class="register-card">
             <div class="icon" aria-hidden="true">PC</div>
@@ -101,6 +97,7 @@ const submit = () => {
             </p>
         </section>
     </div>
+</AuthenticatedLayout>
 </template>
 
 <style scoped>
@@ -111,7 +108,6 @@ const submit = () => {
     align-items: center;
     position: relative;
     padding: 84px 20px 32px;
-    background: var(--auth-page-bg);
     background-size: var(--auth-page-bg-size);
     font-family: Arial, sans-serif;
 }

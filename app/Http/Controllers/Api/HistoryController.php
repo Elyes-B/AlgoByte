@@ -57,14 +57,15 @@ class HistoryController extends Controller
         return HistoryProblemResource::paginatedProblemResponse($problems);
     }
 
-    public function renderHistoryPage()
+    public function renderHistoryPage($username)
     {
-        $userId = Auth::id();
+        $member = Member::where('username', $username)->firstOrFail();
+        $userId = $member->userId;
 
         return Inertia::render('Profile/History', [
             'userId' => $userId,
         ]);
     }
 
-    
+
 }

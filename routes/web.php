@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminProblemController;
 use App\Models\Problem;
 use App\Models\TestCase;
 use App\Http\Controllers\Api\HistoryController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DiscussionController;
 use Illuminate\Foundation\Application;
@@ -88,11 +90,29 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.show');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // users can view other users profiles, but they can't edit them, only the owner of the profile can edit it
+    Route::get('/users/{username}', [ProfileController::class, 'show'])->name('profile.show');
+
+    // if the user owns the account the can use the following crud methods
+    Route::get('/settings', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/settings', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/settings', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    //if the user has is_admin to true they can access the admin routes
+    Route::prefix('admin')->name('admin.')->group(function () {
+        // shows all the pending problems that the admin can either accept or reject
+        Route::get('/problems', [AdminProblemController::class, 'index'])->name('problems.index');
+
+        // updates the status of the problem to either accepted or rejected
+        Route::patch('/problems/{problem}/status', [AdminProblemController::class, 'updateStatus'])->name('problems.updateStatus');
+    });
+    // user can dismiss a notification by deleting it, this will remove the notification from the database and it will not be shown to the user again
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])
+        ->name('notifications.destroy');
 });
 
-Route::get('/profile/history', [HistoryController::class, 'renderHistoryPage'])->name('history.index');
+
+Route::get('/users/{username}/history', [HistoryController::class, 'renderHistoryPage'])
+    ->name('history.index');
 
 require __DIR__.'/auth.php';
