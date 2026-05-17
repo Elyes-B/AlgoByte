@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,12 +16,11 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): Response
+    public function edit(): Response
     {
+        $member = Auth::user(); // Get the authenticated member
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => session('status'),
-            'member' => $request->user(), // Pass the authenticated member to the view
+            'member' => $member, // Pass the authenticated member to the view
         ]);
     }
 
@@ -60,5 +59,18 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Display the user's profile page.
+     */
+    public function show($username): Response
+    {
+        $member = Member::where('username', $username)->firstOrFail();
+        $isOwner = $member->userId === Auth::id();
+        return Inertia::render('Profile/Show', [
+            'member' => $member,
+            'isOwner' => $isOwner,
+        ]);
     }
 }

@@ -6,13 +6,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-class Member extends Authenticatable
+class Member extends Authenticatable implements MustVerifyEmail
 
 {
 
     use HasFactory;
-
+    use Notifiable;
     use SoftDeletes;
     protected $primaryKey = 'userId';
     protected $guarded = []; // Allows all fields to be filled
@@ -52,5 +54,11 @@ public function comments() {
             $query->where('userId', $this->userId)
                   ->successful();
         });
+    }
+
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'user_id', 'userId');
     }
 }

@@ -1,12 +1,32 @@
 <script setup>
-import { ref } from 'vue';
-import { App, Link } from '@inertiajs/vue3';
+import { ref,computed } from 'vue';
+import { Link,usePage,router } from '@inertiajs/vue3';
 import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 
 const showingNavigationDropdown = ref(false);
 const showingAccountDropdown = ref(false);
 
+const page = usePage();
+// Accessing the simplified shared data
+const notifications = computed(() => page.props.auth.notifications);
 
+const showNotifications = ref(false);
+
+const deleteNotification = (id) => {
+    router.delete(route('notifications.destroy', id), {
+        preserveScroll: true,
+        onSuccess: () => {
+
+        },
+    });
+};
+
+
+const getAvatar = (member) => {
+    return member.profile_image
+        ? member.profile_image
+        : `https://ui-avatars.com/api/?name=${member.username}&background=38d9ff&color=05080d`;
+};
 </script>
 
 <template>
@@ -24,54 +44,127 @@ const showingAccountDropdown = ref(false);
                             Home
                         </Link>
                     </li>
-                   
                     <li>
-                        <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
-                            Problem Creation
+                        <Link :href="route('editor')" :class="{ active: route().current('editor') }">
+                            Editor
                         </Link>
                     </li>
                     <li>
-                        <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
-                            Solve Problems
-                        </Link>
-                    </li>   
+                        <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
+                Problem Creation
+            </Link>
+                    </li>
+                    <li>
+            <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
+                Solve Problems
+            </Link>
+                    </li>
                     <li>
                         <AuthBackgroundToggle />
                     </li>
                 </ul>
 
-                <div class="account-menu">
-                    <button
-                        type="button"
-                        class="account-trigger"
-                        @click="showingAccountDropdown = !showingAccountDropdown"
-                    >
-                        <span class="account-avatar">
-                            {{ $page.props.auth.member.username.charAt(0).toUpperCase() }}
-                        </span>
-                        <span class="account-name">
-                            {{ $page.props.auth.member.username }}
-                        </span>
-                        <span class="account-chevron">v</span>
-                    </button>
+                <div class="relative ml-3">
+    <button
+        @click="showNotifications = !showNotifications"
+        class="relative inline-flex items-center p-2 text-gray-400 hover:text-[#38d9ff] transition-all duration-300 focus:outline-none"
+    >
+        <i class="bi bi-bell text-xl" :class="{ 'text-[#38d9ff] drop-shadow-[0_0_8px_rgba(56,217,255,0.5)]': notifications.length > 0 }"></i>
 
-                    <div v-if="showingAccountDropdown" class="account-dropdown">
-                        <Link :href="route('profile.edit')" class="account-dropdown-link">
-                            Profile
-                        </Link>
-                        <Link
-                            :href="route('logout')"
-                            method="post"
-                            as="button"
-                            class="account-dropdown-link logout-link"
-                        >
-                            Logout
-                        </Link>
-                        <Link :href="route('history.index')" class="account-dropdown-link">
-                        History
-                        </Link>
+        <span v-if="notifications.length > 0" class="absolute top-2 right-2 flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#38d9ff] opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-[#38d9ff]"></span>
+        </span>
+    </button>
+
+    <div v-if="showNotifications"
+         class="absolute right-0 mt-3 w-80 origin-top-right rounded-xl border border-[#38d9ff]/20 bg-[#0b1622]/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+    >
+        <div class="p-4 border-b border-[#38d9ff]/10 bg-[#38d9ff]/5">
+            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[#38d9ff]">System Alerts</h3>
+        </div>
+
+        <div class="max-h-[400px] overflow-y-auto custom-scrollbar">
+            <div v-if="notifications.length === 0" class="p-8 text-center">
+                <p class="text-xs text-gray-500 italic">No pending transmissions.</p>
+            </div>
+
+            <div v-for="notif in notifications" :key="notif.id"
+                 class="group relative border-b border-[#38d9ff]/5 p-4 hover:bg-[#38d9ff]/5 transition-colors"
+            >
+                <div class="flex justify-between items-start pr-6">
+                    <div>
+                        <p class="text-xs font-bold text-[#e8f7ff] mb-1">{{ notif.title }}</p>
+                        <p class="text-[11px] leading-relaxed text-gray-400">{{ notif.message }}</p>
                     </div>
+
+                    <button
+                        @click.stop="deleteNotification(notif.id)"
+                        class="absolute top-4 right-4 text-gray-600 hover:text-[#ff5d7a] transition-colors"
+                    >
+                        <i class="bi bi-x-lg text-[10px]"></i>
+                    </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="account-menu">
+    <template v-if="$page.props.auth.member">
+        <button
+            type="button"
+            class="account-trigger"
+            @click="showingAccountDropdown = !showingAccountDropdown"
+        >
+            <img
+                v-if="getAvatar($page.props.auth.member)"
+                :src="getAvatar($page.props.auth.member)"
+                alt="Avatar"
+                class="account-profile-image"
+            />
+            <span v-else class="account-avatar">
+                {{ $page.props.auth.member.username.charAt(0).toUpperCase() }}
+            </span>
+            <span class="account-name">
+                {{ $page.props.auth.member.username }}
+            </span>
+            <span class="account-chevron">v</span>
+        </button>
+
+        <div v-if="showingAccountDropdown" class="account-dropdown">
+            <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
+                Profile
+            </Link>
+            <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
+                History
+            </Link>
+            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.problems.index')" class="account-dropdown-link">
+                Admin Panel
+            </Link>
+            <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="account-dropdown-link logout-link"
+            >
+                Logout
+            </Link>
+        </div>
+    </template>
+
+    <template v-else>
+        <div class="auth-buttons">
+            <Link :href="route('login')" class="account-link">
+                Log in
+            </Link>
+            <Link :href="route('register')" class="account-link">
+                Register
+            </Link>
+
+        </div>
+    </template>
+</div>
             </div>
 
             <button
@@ -91,26 +184,18 @@ const showingAccountDropdown = ref(false);
             <Link :href="route('editor')" :class="{ active: route().current('editor') }">
                 Editor
             </Link>
-            <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
-                Problem Creation
-            </Link>
-            <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
-                Solve Problems
-            </Link>
-            <a href="#footer">
-                About
-            </a>
             <div class="mobile-account">
                 <p>{{ $page.props.auth.member.username }}</p>
-                <Link :href="route('profile.edit')">
+                <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
                     Profile
+                </Link>
+                <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
+                    History
                 </Link>
                 <Link :href="route('logout')" method="post" as="button">
                     Logout
                 </Link>
-                <Link :href="route('history.index')">
-                    History
-                </Link>
+
             </div>
         </div>
 
@@ -160,7 +245,8 @@ const showingAccountDropdown = ref(false);
     align-items: center;
     padding: 14px 32px;
     border-bottom: 1px solid var(--ab-border);
-    background: rgba(5, 10, 16, 0.94);
+    /* Make header slightly transparent version of the background */
+    background: var(--site-bg);
     backdrop-filter: blur(18px);
 }
 
@@ -239,6 +325,12 @@ const showingAccountDropdown = ref(false);
     background: rgba(56, 217, 255, 0.12);
     color: var(--ab-cyan);
     transform: translateY(-2px);
+}
+.account-profile-image {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    object-fit: cover;
 }
 
 .account-menu {
@@ -360,6 +452,17 @@ const showingAccountDropdown = ref(false);
     padding: 22px 24px;
 }
 
+.account-link{
+    padding: 8px 18px;
+    margin-right: 5px;
+    border: 1px solid var(--ab-border);
+    border-radius: 8px;
+    background: rgba(11, 22, 34, 0.82);
+    color: var(--ab-text);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 .app-main {
     flex: 1;
 }

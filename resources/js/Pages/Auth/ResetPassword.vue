@@ -2,7 +2,9 @@
 import { computed } from 'vue';
 import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 import InputError from '@/Components/InputError.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+
 
 const props = defineProps({
     email: {
@@ -39,9 +41,9 @@ const submit = () => {
 
 <template>
     <Head title="Reset Password" />
-
+<AuthenticatedLayout>
     <div class="page">
-        <AuthBackgroundToggle />
+
 
         <Link href="/" class="logo">
             <h1>AlgoByte</h1>
@@ -114,7 +116,9 @@ const submit = () => {
                 ↻ Resend code
             </Link>
         </section>
+
     </div>
+    </AuthenticatedLayout>
 </template>
 
 <style scoped>
