@@ -1,16 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminProblemController;
-use App\Models\Problem;
-use App\Models\TestCase;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DiscussionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Services\Piston\PistonExecutionService;
@@ -18,8 +15,8 @@ use App\Http\Controllers\ProblemCreationController;
 use App\Http\Controllers\ProblemBrowsingController;
 use App\Http\Controllers\CodeSubmissionController;
 use App\Http\Controllers\CodeSolutionController;
-use App\Models\Comment;
-use App\Models\LikeActivity;
+use App\Http\Controllers\ReportController;
+
 Route::get('/', function () {
     return Inertia::render('Home');
 })->middleware(['auth', 'verified'])->name('home');
@@ -41,6 +38,8 @@ Route::post('/comments/{comment}/upvote', [DiscussionController::class, 'upvoteC
 Route::post('/comments/{comment}/downvote', [DiscussionController::class, 'downvoteComment'])->middleware(['auth', 'verified'])->name('comments.downvote');
 
 Route::get('/browse-problems', [ProblemBrowsingController::class, 'index'])->middleware(['auth', 'verified'])->name('browse-problems.index');
+
+Route::post('/reports', [ReportController::class, 'store'])->middleware(['auth', 'verified'])->name('reports.store');
 
 Route::get('/browse-problems/{problem}', [ProblemBrowsingController::class, 'show'])->middleware(['auth', 'verified'])->name('browse-problems.show');
 
@@ -114,5 +113,9 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/users/{username}/history', [HistoryController::class, 'renderHistoryPage'])
     ->name('history.index');
+
+Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+});
 
 require __DIR__.'/auth.php';

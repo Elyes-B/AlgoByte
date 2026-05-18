@@ -8,7 +8,7 @@ const showingAccountDropdown = ref(false);
 
 const page = usePage();
 // Accessing the simplified shared data
-const notifications = computed(() => page.props.auth.notifications);
+const notifications = computed(() => page.props.notifications);
 
 const showNotifications = ref(false);
 
@@ -139,7 +139,7 @@ const getAvatar = (member) => {
             <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
                 History
             </Link>
-            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.problems.index')" class="account-dropdown-link">
+            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.dashboard')" class="account-dropdown-link">
                 Admin Panel
             </Link>
             <Link

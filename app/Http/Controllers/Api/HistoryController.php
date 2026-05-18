@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\HistoryProblemResource;
 use App\Models\Member;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class HistoryController extends Controller
@@ -24,7 +22,19 @@ class HistoryController extends Controller
             ->latest()
             ->paginate(15);
 
-        return HistoryProblemResource::paginatedProblemResponse($problems);
+        // Transform the collection inline using the paginator's through() method
+        $problems->through(fn ($problem) => [
+            'id' => $problem->problemId,
+            'title' => $problem->title,
+            'difficulty' => ucfirst((string) $problem->difficulty),
+            'status' => $problem->status,
+            'created_at' => optional($problem->created_at)->format('Y-m-d'),
+            'creator' => [
+                'username' => $problem->creator?->username ?? 'Unknown',
+            ],
+        ]);
+
+        return response()->json($problems);
     }
 
     /**
@@ -39,7 +49,18 @@ class HistoryController extends Controller
             ->latest()
             ->paginate(15);
 
-        return HistoryProblemResource::paginatedProblemResponse($problems);
+        $problems->through(fn ($problem) => [
+            'id' => $problem->problemId,
+            'title' => $problem->title,
+            'difficulty' => ucfirst((string) $problem->difficulty),
+            'status' => $problem->status,
+            'created_at' => optional($problem->created_at)->format('Y-m-d'),
+            'creator' => [
+                'username' => $problem->creator?->username ?? 'Unknown',
+            ],
+        ]);
+
+        return response()->json($problems);
     }
 
     /**
@@ -54,9 +75,23 @@ class HistoryController extends Controller
             ->latest()
             ->paginate(15);
 
-        return HistoryProblemResource::paginatedProblemResponse($problems);
+        $problems->through(fn ($problem) => [
+            'id' => $problem->problemId,
+            'title' => $problem->title,
+            'difficulty' => ucfirst((string) $problem->difficulty),
+            'status' => $problem->status,
+            'created_at' => optional($problem->created_at)->format('Y-m-d'),
+            'creator' => [
+                'username' => $problem->creator?->username ?? 'Unknown',
+            ],
+        ]);
+
+        return response()->json($problems);
     }
 
+    /**
+     * Render the Inertia history page.
+     */
     public function renderHistoryPage($username)
     {
         $member = Member::where('username', $username)->firstOrFail();
@@ -66,6 +101,4 @@ class HistoryController extends Controller
             'userId' => $userId,
         ]);
     }
-
-
 }

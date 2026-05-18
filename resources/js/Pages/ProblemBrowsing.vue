@@ -1,5 +1,6 @@
 <script setup>
-import { computed, reactive } from 'vue';
+import axios from 'axios';
+import { computed, reactive, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
@@ -123,6 +124,67 @@ const descriptionPreview = (description) => {
 
 const problemHref = (problem) => route('browse-problems.show', problem.problemId);
 
+const reportForm = reactive({
+    problemId: null,
+    reason: '',
+    severity: 'medium',
+    status: 'pending',
+});
+
+const formErrors = reactive({
+    reason: null,
+    severity: null,
+});
+
+const showReportModal = ref(false);
+const submittingReport = ref(false);
+const reportResult = ref(null);
+
+const openReportModal = (problem) => {
+    reportForm.problemId = problem.problemId;
+    reportForm.reason = '';
+    reportForm.severity = 'medium';
+    reportForm.status = 'pending';
+    formErrors.reason = null;
+    formErrors.severity = null;
+    reportResult.value = null;
+    showReportModal.value = true;
+};
+
+const closeReportModal = () => {
+    showReportModal.value = false;
+};
+
+const submitReport = async () => {
+    submittingReport.value = true;
+    formErrors.reason = null;
+    formErrors.severity = null;
+    reportResult.value = null;
+
+    try {
+        const response = await axios.post(route('reports.store'), {
+            problemId: reportForm.problemId,
+            reason: reportForm.reason,
+            severity: reportForm.severity,
+            status: reportForm.status,
+        });
+
+        reportResult.value = response.data.message || 'Report submitted successfully.';
+        reportForm.reason = '';
+        showReportModal.value = false;
+    } catch (error) {
+        if (error.response?.status === 422) {
+            const errors = error.response.data.errors ?? {};
+            formErrors.reason = errors.reason?.[0] ?? null;
+            formErrors.severity = errors.severity?.[0] ?? null;
+        } else {
+            reportResult.value = 'Unable to submit report at this time.';
+        }
+    } finally {
+        submittingReport.value = false;
+    }
+};
+
 const resultSummary = computed(() => {
     if (!props.problems.total) {
         return 'No public problems available right now.';
@@ -159,7 +221,7 @@ const cleanPaginationLabel = (label) =>
                     </p>
                 </div>
 
-                
+
             </div>
 
             <section class="filter-panel">
@@ -220,30 +282,34 @@ const cleanPaginationLabel = (label) =>
                 </div>
 
                 <div v-if="hasResults" class="results-grid">
-                    <Link
+                    <div
                         v-for="problem in problemItems"
                         :key="problem.problemId"
-                        :href="problemHref(problem)"
                         class="problem-card"
                     >
                         <div class="problem-topline">
                             <span :class="['difficulty-pill', difficultyClass(problem.difficulty)]">
                                 {{ difficultyLabel(problem.difficulty) }}
                             </span>
+                            <button type="button" class="report-button" @click.stop="openReportModal(problem)">
+                                Report
+                            </button>
                         </div>
 
-                        <div class="problem-body">
-                            <h3>{{ problem.title }}</h3>
-                            <p>{{ descriptionPreview(problem.description) }}</p>
-                        </div>
-
-                        <div class="problem-footer">
-                            <div class="meta-row">
-                                <span>{{ formatDate(problem.createdAt) }}</span>
-                                <span class="open-link">Open problem</span>
+                        <Link :href="problemHref(problem)" class="problem-card-link">
+                            <div class="problem-body">
+                                <h3>{{ problem.title }}</h3>
+                                <p>{{ descriptionPreview(problem.description) }}</p>
                             </div>
-                        </div>
-                    </Link>
+
+                            <div class="problem-footer">
+                                <div class="meta-row">
+                                    <span>{{ formatDate(problem.createdAt) }}</span>
+                                    <span class="open-link">Open problem</span>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
 
                 <div v-else class="empty-state">
@@ -272,6 +338,61 @@ const cleanPaginationLabel = (label) =>
                     </Link>
                 </nav>
             </section>
+
+            <div v-if="showReportModal" class="modal-custom show" role="dialog" aria-modal="true">
+                <div class="modal-dialog-custom" @click.stop>
+                    <div class="modal-content-custom">
+                        <div class="modal-header-custom">
+                            <h5 class="modal-title-custom">Report problem</h5>
+                            <button type="button" class="btn-close-custom" @click="closeReportModal">×</button>
+                        </div>
+                        <div class="modal-body-custom">
+                            <p class="modal-subtitle-custom">Tell us why this problem should be reviewed.</p>
+
+                            <div class="form-group-custom">
+                                <label for="report-reason">Reason</label>
+                                <textarea
+                                    id="report-reason"
+                                    class="form-control-custom"
+                                    rows="4"
+                                    v-model="reportForm.reason"
+                                    placeholder="Describe the issue in a few sentences"
+                                ></textarea>
+                                <p v-if="formErrors.reason" class="invalid-feedback-custom">{{ formErrors.reason }}</p>
+                            </div>
+
+                            <div class="form-row-custom">
+                                <div class="form-group-custom half-width">
+                                    <label for="report-severity">Severity</label>
+                                    <select
+                                        id="report-severity"
+                                        class="form-control-custom"
+                                        v-model="reportForm.severity"
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                    <p v-if="formErrors.severity" class="invalid-feedback-custom">{{ formErrors.severity }}</p>
+                                </div>
+
+                                <div class="form-group-custom half-width">
+                                    <label>Status</label>
+                                    <input type="text" readonly class="form-control-custom form-control-readonly" value="Pending review" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer-custom">
+                            <button type="button" class="secondary-action" @click="closeReportModal" :disabled="submittingReport">Close</button>
+                            <button type="button" class="primary-action" @click="submitReport" :disabled="submittingReport">
+                                <span v-if="submittingReport">Submitting...</span>
+                                <span v-else>Submit report</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-backdrop-custom" @click="closeReportModal"></div>
+            </div>
         </section>
     </AuthenticatedLayout>
 </template>
@@ -532,14 +653,177 @@ const cleanPaginationLabel = (label) =>
     background:
         radial-gradient(circle at top right, rgba(56, 217, 255, 0.12), transparent 34%),
         linear-gradient(180deg, rgba(11, 22, 34, 0.96), rgba(5, 10, 16, 0.96));
-    color: inherit;
-    text-decoration: none;
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .problem-card:hover {
     border-color: rgba(56, 217, 255, 0.34);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.problem-card-link {
+    display: grid;
+    gap: 18px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.problem-card-link:hover {
+    text-decoration: none;
+}
+
+.report-button {
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 93, 122, 0.55);
+    border-radius: 8px;
+    background: rgba(255, 93, 122, 0.14);
+    color: #ffccd7;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+}
+
+.report-button:hover {
+    transform: translateY(-1px);
+    border-color: #ff5d7a;
+    background: rgba(255, 93, 122, 0.22);
+    color: #fff;
+}
+
+.modal-custom {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.modal-dialog-custom {
+    position: relative;
+    z-index: 1060;
+    width: min(680px, 100%);
+    margin: 0.5rem;
+}
+
+.modal-content-custom {
+    position: relative;
+    z-index: 1061;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: #07121d;
+    color: var(--ab-text);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+}
+
+.modal-header-custom,
+.modal-footer-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-header-custom {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-title-custom {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 800;
+}
+
+.btn-close-custom {
+    border: none;
+    background: transparent;
+    color: var(--ab-text);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal-body-custom {
+    padding: 1rem 1.25rem 0 1.25rem;
+}
+
+.modal-subtitle-custom {
+    margin: 0 0 1rem;
+    color: var(--ab-muted);
+    font-size: 0.95rem;
+}
+
+.form-group-custom {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.form-row-custom {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.half-width {
+    min-width: 0;
+}
+
+.form-control-custom {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    background: rgba(8, 18, 29, 0.88);
+    color: var(--ab-text);
+    font-size: 0.95rem;
+}
+
+.form-control-custom:focus {
+    outline: none;
+    border-color: rgba(56, 217, 255, 0.6);
+    box-shadow: 0 0 0 0.15rem rgba(56, 217, 255, 0.15);
+}
+
+.form-control-readonly {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.invalid-feedback-custom {
+    margin: 0;
+    color: #ff6b7d;
+    font-size: 0.85rem;
+}
+
+.modal-footer-custom {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+}
+
+.modal-backdrop-custom {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1050;
+}
+
+@media (max-width: 680px) {
+    .form-row-custom {
+        grid-template-columns: 1fr;
+    }
 }
 
 .problem-topline,

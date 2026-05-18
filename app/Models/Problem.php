@@ -29,4 +29,8 @@ class Problem extends Model {
     public function sharedSolutions() {
         return $this->hasMany(SharedSolution::class, 'problemId', 'problemId');
     }
+    public function reports()
+    {
+        return $this->hasMany(Report::class , 'problemId', 'problemId');
+    }
 }

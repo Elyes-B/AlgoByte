@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -39,6 +40,7 @@ class HandleInertiaRequests extends Middleware
         : [],
         ],
         'executionResult' => fn () => $request->session()->get('executionResult'),
+        'notifications' => fn () => Notification::where('user_id', $request->user()->userId ?? null)->latest()->get(),
     ];
 }
 }
