@@ -39,9 +39,18 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        return Inertia::render('Admin/Dashboard', [
+            Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'recentReports' => $recentReports,
         ]);
+
+            return response()->json([
+            'message' => 'Problem created successfully.',
+            ]
+        , 201);
+
+
+
+
     }
 }
