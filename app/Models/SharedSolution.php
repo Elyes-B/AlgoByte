@@ -21,6 +21,10 @@ class SharedSolution extends Model {
         return $this->belongsTo(Problem::class, 'problemId', 'problemId');
     }
 
+        public function likes() {
+        return $this->hasMany(LikeActivity::class, 'sharedSolutionId', 'solutionId');
+    }
+
     public function submission() {
         return $this->belongsTo(Submission::class, 'submissionId', 'submissionId');
     }

@@ -5,8 +5,27 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Problem;
 use Inertia\Inertia;
+use App\Models\Member;
 class ProblemBrowsingController extends Controller
 {
+
+    public function makePublic(Request $request, Problem $problem)
+    {
+
+        $problem->visibility = 'public';
+        $problem->save();
+
+        return response()->json(['message' => 'Problem is now public']);
+    }
+    public function makePrivate(Request $request, Problem $problem)
+    {
+
+        $problem->visibility = 'private';
+        $problem->save();
+
+        return response()->json(['message' => 'Problem is now private']);
+    }
+
 
     public function index(Request $request)
     {
@@ -20,7 +39,13 @@ class ProblemBrowsingController extends Controller
 
         $problems = Problem::query()
             ->with('creator:userId,username')
-            ->where('visibility', 'public')
+            ->where(function ($query) {
+                $query->where('visibility', 'public')
+                      ->orWhere(function ($query) {
+                          $query->where('visibility', 'private')
+                                ->where('creatorId', auth()->id());
+                      });
+            })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('title', 'like', '%' . $search . '%');
             })
@@ -40,11 +65,13 @@ class ProblemBrowsingController extends Controller
                     'status' => $problem->status,
                     'creatorName' => $problem->creator?->username,
                     'createdAt' => $problem->created_at->diffForHumans(null, false, false, 2),
+                    'visibility'=>$problem->visibility,
                 ];
             });
 
         return Inertia::render('ProblemBrowsing', [
             'problems' => $problems,
+            'currentUser'=> auth()->user()?->username,
             'filters' => [
                 'search' => $search,
                 'difficulty' => $difficulty,
@@ -90,6 +117,8 @@ class ProblemBrowsingController extends Controller
                         'username' => $solution->member?->username ?? 'Unknown user',
                         'language' => $solution->submission?->language ?? 'Unknown language',
                         'code' => $solution->code,
+                        'likes' => $solution->likes()->count(),
+                        'isLikedByCurrentUser' => $solution->likes()->where('userId', auth()->id())->exists(),
                         'explanation' => $solution->explanation,
                         'createdAt' => $solution->created_at->diffForHumans(null, false, false, 2),
                     ];

@@ -8,47 +8,60 @@ use App\Models\Comment;
 
 class DiscussionController extends Controller
 {
-    public function upvote(Request $request, Discussion $discussion)
-    {
-        $userId = auth()->id();
-        if($discussion->likes()->where('userId', $userId)->exists()) {
-            return response()->json(['message' => 'Already liked'], 400);
-        }
 
-        $discussion->likes()->create(['userId' => $userId]);
-        return response()->json(['message' => 'Upvoted successfully']);
+    public function store(Request $request, $problemId)
+    {
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $discussion = Discussion::create([
+            'problemId' => $problemId,
+            'userId' => auth()->id(),
+            'title'=>   $validated['title'],
+            'content' => $validated['content'],
+        ]);
+
+        return response()->json([
+            'message' => 'Discussion created successfully',
+            'data' => [
+                'discussionId' => $discussion->discussionId,
+                'problemId' => $problemId,
+                'userId' => auth()->id(),
+                'username' => $request->user()?->username ?? '',
+                'title' => $validated['title'],
+                'content' => $validated['content'],
+                'likes' => 0,
+                'comments' => [],
+                'createdAt' => $discussion->created_at->toDateTimeString(),
+            ],
+        ], 201);
     }
 
-    public function upvoteComment(Request $request, Comment $comment)
+    public function storeComment(Request $request, $discussionId)
     {
-        $userId = auth()->id();
-        if($comment->likes()->where('userId', $userId)->exists()) {
-            return response()->json(['message' => 'Already liked'], 400);
-        }
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+        ]);
 
-        $comment->likes()->create(['userId' => $userId]);
-        return response()->json(['message' => 'Upvoted successfully']);
-    }
+        $comment = Comment::create([
+            'discussionId' => $discussionId,
+            'userId' => auth()->id(),
+            'content' => $validated['content'],
+        ]);
 
-    public function downvoteComment(Request $request, Comment $comment)
-    {
-        $userId = auth()->id();
-        $like = $comment->likes()->where('userId', $userId)->first();
-        if($like) {
-            $like->delete();
-        }
-        return response()->json(['message' => 'Downvoted successfully']);
-    }
-
-
-    public function downvote(Request $request, Discussion $discussion)
-    {
-        $userId = auth()->id();
-        $like = $discussion->likes()->where('userId', $userId)->first();
-        if($like) {
-            $like->delete();
-        }
-        return response()->json(['message' => 'Downvoted successfully']);
+        return response()->json([
+            'message' => 'Comment created successfully',
+            'data' => [
+                'commentId' => $comment->commentId,
+                'discussionId' => $discussionId,
+                'userId' => auth()->id(),
+                'username' => $request->user()?->username ?? '',
+                'content' => $validated['content'],
+                'likes' => 0,
+                'createdAt' => $comment->created_at->toDateTimeString(),
+            ],
+        ], 201);
     }
 }
-

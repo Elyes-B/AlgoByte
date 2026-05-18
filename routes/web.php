@@ -15,6 +15,7 @@ use App\Http\Controllers\ProblemCreationController;
 use App\Http\Controllers\ProblemBrowsingController;
 use App\Http\Controllers\CodeSubmissionController;
 use App\Http\Controllers\CodeSolutionController;
+use App\Http\Controllers\LikesController;
 use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
@@ -31,6 +32,16 @@ Route::get('/problemcreation', function () {
 
 Route::post('/problemcreation', [ProblemCreationController::class, 'store'])->middleware(['auth', 'verified'])->name('problem-creation.store');
 
+
+Route::post('/discussions/{discussion}/upvote', [LikesController::class, 'upvote'])->middleware(['auth', 'verified'])->name('discussions.upvote');
+Route::post('/discussions/{discussion}/downvote', [LikesController::class, 'downvote'])->middleware(['auth', 'verified'])->name('discussions.downvote');
+
+Route::post('/comments/{comment}/upvote', [LikesController::class, 'upvoteComment'])->middleware(['auth', 'verified'])->name('comments.upvote');
+Route::post('/comments/{comment}/downvote', [LikesController::class, 'downvoteComment'])->middleware(['auth', 'verified'])->name('comments.downvote');
+
+Route::post('/solutions/{solution}/upvote', [LikesController::class, 'upvoteSolution'])->middleware(['auth', 'verified'])->name('solutions.upvote');
+Route::post('/solutions/{solution}/downvote', [LikesController::class, 'downvoteSolution'])->middleware(['auth', 'verified'])->name('solutions.downvote');
+
 Route::post('/discussions/{discussion}/upvote', [DiscussionController::class, 'upvote'])->middleware(['auth', 'verified'])->name('discussions.upvote');
 Route::post('/discussions/{discussion}/downvote', [DiscussionController::class, 'downvote'])->middleware(['auth', 'verified'])->name('discussions.downvote');
 
@@ -41,7 +52,13 @@ Route::get('/browse-problems', [ProblemBrowsingController::class, 'index'])->mid
 
 Route::post('/reports', [ReportController::class, 'store'])->middleware(['auth', 'verified'])->name('reports.store');
 
+Route::post('/browse-problems/{problem}/makepublic',[ProblemBrowsingController::class,'makePublic'])->middleware(['auth','verified'])->name('problem.public');
+Route::post('/browse-problems/{problem}/makeprivate',[ProblemBrowsingController::class,'makePrivate'])->middleware(['auth','verified'])->name('problem.private');
+
 Route::get('/browse-problems/{problem}', [ProblemBrowsingController::class, 'show'])->middleware(['auth', 'verified'])->name('browse-problems.show');
+
+Route::post('/browse-problems/{problem}/discussions', [DiscussionController::class, 'store'])->middleware(['auth', 'verified'])->name('discussions.store');
+Route::post('/discussions/{discussion}/comments', [DiscussionController::class, 'storeComment'])->middleware(['auth', 'verified'])->name('comments.store');
 
 Route::post('/browse-problems/{problem}/submission', [CodeSubmissionController::class, 'store'])->middleware(['auth', 'verified'])->name('submissions.store');
 Route::post('/browse-problems/{problem}/solution', [CodeSolutionController::class, 'store'])->middleware(['auth', 'verified'])->name('solutions.store');

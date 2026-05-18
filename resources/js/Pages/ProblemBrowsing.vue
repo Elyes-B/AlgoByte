@@ -8,6 +8,11 @@ const props = defineProps({
     problems: {
         type: Object,
         required: true,
+    }
+     ,
+    currentUser:{
+        type:String,
+        required:true,
     },
     filters: {
         type: Object,
@@ -17,7 +22,7 @@ const props = defineProps({
         }),
     },
 });
-
+const updatingState = reactive({});
 const difficultyOptions = [
     { value: 'all', label: 'All levels' },
     { value: 'easy', label: 'Easy' },
@@ -199,7 +204,37 @@ const resultSummary = computed(() => {
 
     return `Showing ${start}-${end} of ${props.problems.total} public problems`;
 });
+const makePublic = async (problem) => {
+    updatingState[problem.problemId] = "Saving changes...";
+    try {
+        await axios.post(
+            route('problem.public', { problem: problem.problemId }),
+            {},
+            { headers: { Accept: 'application/json' } }
+        );
+        router.reload();
+    } catch (error) {
+        console.log("couldn't make public: ", error);
+    } finally {
+        updatingState[problem.problemId] = null;
+    }
+}
 
+const makePrivate = async (problem) => {
+    updatingState[problem.problemId] = "Saving changes...";
+    try {
+        await axios.post(
+            route('problem.private', { problem: problem.problemId }),
+            {},
+            { headers: { Accept: 'application/json' } }
+        );
+        router.reload();
+    } catch (error) {
+        console.log("couldn't make private: ", error);
+    } finally {
+        updatingState[problem.problemId] = null;
+    }
+}
 const cleanPaginationLabel = (label) =>
     String(label)
         .replace('&laquo; Previous', 'Previous')
@@ -309,6 +344,18 @@ const cleanPaginationLabel = (label) =>
                                 </div>
                             </div>
                         </Link>
+                        <button
+                            v-if="problem.visibility === 'private'"
+                            class="make-public-btn"
+                            @click.prevent="makePublic(problem)"
+                            :disabled="updatingState[problem.problemId]"
+                        >{{ updatingState[problem.problemId] || 'Make Public?' }}</button>
+                        <button
+                            class="make-public-btn"
+                            @click.prevent="makePrivate(problem)"
+                            v-else-if="problem.creatorName===props.currentUser"
+                            :disabled="updatingState[problem.problemId]"
+                        >{{ updatingState[problem.problemId] || 'Make Private?' }}</button>
                     </div>
                 </div>
 
