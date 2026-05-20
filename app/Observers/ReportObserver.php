@@ -16,7 +16,7 @@ class ReportObserver
         Notification::create([
             'user_id' => Auth::id(),
             'title' => 'report_created',
-            'message' => "A new report with the id '{$report->id}' has been created.",
+            'message' => "A new report with the id '{$report->reportId}' has been created.",
             'type' => 'info',
             'link' => null,
             'created_at' => now(),

@@ -1,6 +1,6 @@
 <script setup>
-import { ref,computed } from 'vue';
-import { Link,usePage,router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import AuthBackgroundToggle from '@/Components/AuthBackgroundToggle.vue';
 
 const showingNavigationDropdown = ref(false);
@@ -12,6 +12,9 @@ const notifications = computed(() => page.props.notifications);
 
 const showNotifications = ref(false);
 
+// Base Supabase storage URL for public profile bucket images
+const SUPABASE_STORAGE_URL = 'https://taycnalhgabfrapisbct.supabase.co/storage/v1/object/public/images/profiles';
+
 const deleteNotification = (id) => {
     router.delete(route('notifications.destroy', id), {
         preserveScroll: true,
@@ -21,10 +24,9 @@ const deleteNotification = (id) => {
     });
 };
 
-
 const getAvatar = (member) => {
     return member.profile_image
-        ? member.profile_image
+        ? `${SUPABASE_STORAGE_URL}/${member.profile_image}`
         : `https://ui-avatars.com/api/?name=${member.username}&background=38d9ff&color=05080d`;
 };
 </script>
@@ -44,20 +46,16 @@ const getAvatar = (member) => {
                             Home
                         </Link>
                     </li>
+                    
                     <li>
-                        <Link :href="route('editor')" :class="{ active: route().current('editor') }">
-                            Editor
+                        <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
+                            Problem Creation
                         </Link>
                     </li>
                     <li>
-                        <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
-                Problem Creation
-            </Link>
-                    </li>
-                    <li>
-            <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
-                Solve Problems
-            </Link>
+                        <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
+                            Solve Problems
+                        </Link>
                     </li>
                     <li>
                         <AuthBackgroundToggle />
@@ -65,106 +63,101 @@ const getAvatar = (member) => {
                 </ul>
 
                 <div class="relative ml-3">
-    <button
-        @click="showNotifications = !showNotifications"
-        class="relative inline-flex items-center p-2 text-gray-400 hover:text-[#38d9ff] transition-all duration-300 focus:outline-none"
-    >
-        <i class="bi bi-bell text-xl" :class="{ 'text-[#38d9ff] drop-shadow-[0_0_8px_rgba(56,217,255,0.5)]': notifications.length > 0 }"></i>
-
-        <span v-if="notifications.length > 0" class="absolute top-2 right-2 flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#38d9ff] opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-[#38d9ff]"></span>
-        </span>
-    </button>
-
-    <div v-if="showNotifications"
-         class="absolute right-0 mt-3 w-80 origin-top-right rounded-xl border border-[#38d9ff]/20 bg-[#0b1622]/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
-    >
-        <div class="p-4 border-b border-[#38d9ff]/10 bg-[#38d9ff]/5">
-            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[#38d9ff]">System Alerts</h3>
-        </div>
-
-        <div class="max-h-[400px] overflow-y-auto custom-scrollbar">
-            <div v-if="notifications.length === 0" class="p-8 text-center">
-                <p class="text-xs text-gray-500 italic">No pending transmissions.</p>
-            </div>
-
-            <div v-for="notif in notifications" :key="notif.id"
-                 class="group relative border-b border-[#38d9ff]/5 p-4 hover:bg-[#38d9ff]/5 transition-colors"
-            >
-                <div class="flex justify-between items-start pr-6">
-                    <div>
-                        <p class="text-xs font-bold text-[#e8f7ff] mb-1">{{ notif.title }}</p>
-                        <p class="text-[11px] leading-relaxed text-gray-400">{{ notif.message }}</p>
-                    </div>
-
                     <button
-                        @click.stop="deleteNotification(notif.id)"
-                        class="absolute top-4 right-4 text-gray-600 hover:text-[#ff5d7a] transition-colors"
+                        @click="showNotifications = !showNotifications"
+                        class="relative inline-flex items-center p-2 text-gray-400 hover:text-[#38d9ff] transition-all duration-300 focus:outline-none"
                     >
-                        <i class="bi bi-x-lg text-[10px]"></i>
+                        <i class="bi bi-bell text-xl" :class="{ 'text-[#38d9ff] drop-shadow-[0_0_8px_rgba(56,217,255,0.5)]': notifications.length > 0 }"></i>
+
+                        <span v-if="notifications.length > 0" class="absolute top-2 right-2 flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#38d9ff] opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-[#38d9ff]"></span>
+                        </span>
                     </button>
+
+                    <div v-if="showNotifications"
+                         class="absolute right-0 mt-3 w-80 origin-top-right rounded-xl border border-[#38d9ff]/20 bg-[#0b1622]/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                    >
+                        <div class="p-4 border-b border-[#38d9ff]/10 bg-[#38d9ff]/5">
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[#38d9ff]">System Alerts</h3>
+                        </div>
+
+                        <div class="max-h-[400px] overflow-y-auto custom-scrollbar">
+                            <div v-if="notifications.length === 0" class="p-8 text-center">
+                                <p class="text-xs text-gray-500 italic">No pending transmissions.</p>
+                            </div>
+
+                            <div v-for="notif in notifications" :key="notif.id"
+                                 class="group relative border-b border-[#38d9ff]/5 p-4 hover:bg-[#38d9ff]/5 transition-colors"
+                            >
+                                <div class="flex justify-between items-start pr-6">
+                                    <div>
+                                        <p class="text-xs font-bold text-[#e8f7ff] mb-1">{{ notif.title }}</p>
+                                        <p class="text-[11px] leading-relaxed text-gray-400">{{ notif.message }}</p>
+                                    </div>
+
+                                    <button
+                                        @click.stop="deleteNotification(notif.id)"
+                                        class="absolute top-4 right-4 text-gray-600 hover:text-[#ff5d7a] transition-colors"
+                                    >
+                                        <i class="bi bi-x-lg text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
 
                 <div class="account-menu">
-    <template v-if="$page.props.auth.member">
-        <button
-            type="button"
-            class="account-trigger"
-            @click="showingAccountDropdown = !showingAccountDropdown"
-        >
-            <img
-                v-if="getAvatar($page.props.auth.member)"
-                :src="getAvatar($page.props.auth.member)"
-                alt="Avatar"
-                class="account-profile-image"
-            />
-            <span v-else class="account-avatar">
-                {{ $page.props.auth.member.username.charAt(0).toUpperCase() }}
-            </span>
-            <span class="account-name">
-                {{ $page.props.auth.member.username }}
-            </span>
-            <span class="account-chevron">v</span>
-        </button>
+                    <template v-if="$page.props.auth.member">
+                        <button
+                            type="button"
+                            class="account-trigger"
+                            @click="showingAccountDropdown = !showingAccountDropdown"
+                        >
+                            <img
+                                :src="getAvatar($page.props.auth.member)"
+                                alt="Avatar"
+                                class="account-profile-image"
+                            />
+                            <span class="account-name">
+                                {{ $page.props.auth.member.username }}
+                            </span>
+                            <span class="account-chevron">v</span>
+                        </button>
 
-        <div v-if="showingAccountDropdown" class="account-dropdown">
-            <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
-                Profile
-            </Link>
-            <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
-                History
-            </Link>
-            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.dashboard')" class="account-dropdown-link">
-                Admin Panel
-            </Link>
-            <Link
-                :href="route('logout')"
-                method="post"
-                as="button"
-                class="account-dropdown-link logout-link"
-            >
-                Logout
-            </Link>
-        </div>
-    </template>
+                        <div v-if="showingAccountDropdown" class="account-dropdown">
+                            <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
+                                Profile
+                            </Link>
+                            <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
+                                History
+                            </Link>
+                            <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.dashboard')" class="account-dropdown-link">
+                                Admin Panel
+                            </Link>
+                            <Link
+                                :href="route('logout')"
+                                method="post"
+                                as="button"
+                                class="account-dropdown-link logout-link"
+                            >
+                                Logout
+                            </Link>
+                        </div>
+                    </template>
 
-    <template v-else>
-        <div class="auth-buttons">
-            <Link :href="route('login')" class="account-link">
-                Log in
-            </Link>
-            <Link :href="route('register')" class="account-link">
-                Register
-            </Link>
-
-        </div>
-    </template>
-</div>
+                    <template v-else>
+                        <div class="auth-buttons">
+                            <Link :href="route('login')" class="account-link">
+                                Log in
+                            </Link>
+                            <Link :href="route('register')" class="account-link">
+                                Register
+                            </Link>
+                        </div>
+                    </template>
+                </div>
             </div>
 
             <button
@@ -184,18 +177,34 @@ const getAvatar = (member) => {
             <Link :href="route('editor')" :class="{ active: route().current('editor') }">
                 Editor
             </Link>
-            <div class="mobile-account">
-                <p>{{ $page.props.auth.member.username }}</p>
+            <Link :href="route('problem-creation.index')" :class="{ active: route().current('problem-creation.index') }">
+                Problem Creation
+            </Link>
+            <Link :href="route('browse-problems.index')" :class="{ active: route().current('browse-problems.index') }">
+                Solve Problems
+            </Link>
+
+            <div v-if="$page.props.auth.member" class="mobile-account">
+                <div class="flex items-center gap-3 mb-2">
+                    <img
+                        :src="getAvatar($page.props.auth.member)"
+                        alt="Avatar"
+                        class="account-profile-image"
+                    />
+                    <p>{{ $page.props.auth.member.username }}</p>
+                </div>
                 <Link :href="route('profile.show',$page.props.auth.member.username)" class="account-dropdown-link">
                     Profile
                 </Link>
                 <Link :href="route('history.index', $page.props.auth.member.username)" class="account-dropdown-link">
                     History
                 </Link>
-                <Link :href="route('logout')" method="post" as="button">
+                <Link v-if="$page.props.auth.member.is_admin == true" :href="route('admin.dashboard')" class="account-dropdown-link">
+                    Admin Panel
+                </Link>
+                <Link :href="route('logout')" method="post" as="button" class="account-dropdown-link text-left">
                     Logout
                 </Link>
-
             </div>
         </div>
 

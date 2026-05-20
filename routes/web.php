@@ -17,6 +17,10 @@ use App\Http\Controllers\CodeSubmissionController;
 use App\Http\Controllers\CodeSolutionController;
 use App\Http\Controllers\LikesController;
 use App\Http\Controllers\ReportController;
+use App\Models\Member;
+use App\Models\Problem;
+use App\Models\Submission;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return Inertia::render('Home');
@@ -26,9 +30,11 @@ Route::get('/editor', function () {
     return Inertia::render('Editor');
 })->middleware(['auth', 'verified'])->name('editor');
 
-Route::get('/problemcreation', function () {
-    return Inertia::render('problemCreation');
-})->middleware(['auth', 'verified'])->name('problem-creation.index');
+Route::get('/problemcreation', [ProblemCreationController::class, 'index'])->middleware(['auth', 'verified'])->name('problem-creation.index');
+
+Route::delete('/problemcreation/{problem}', [ProblemCreationController::class, 'delete'])
+    ->middleware(['auth', 'verified'])
+    ->name('problem-creation.delete');
 
 Route::post('/problemcreation', [ProblemCreationController::class, 'store'])->middleware(['auth', 'verified'])->name('problem-creation.store');
 
@@ -134,5 +140,7 @@ Route::get('/users/{username}/history', [HistoryController::class, 'renderHistor
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 });
+
+
 
 require __DIR__.'/auth.php';

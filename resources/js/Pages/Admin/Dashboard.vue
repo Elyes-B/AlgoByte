@@ -1,7 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+
+
+
 
 const props = defineProps({
     stats: {
@@ -53,7 +57,9 @@ const statusLabel = (status) => {
                     <p class="eyebrow">System Management</p>
                     <h1>Admin Dashboard</h1>
                 </div>
-                <p class="subtitle">Monitor platform activity and manage reports</p>
+                <div class="dashboard-header-right">
+                    <p class="subtitle">Monitor platform activity and manage reports</p>
+                </div>
             </div>
 
             <section class="stats-section">
@@ -94,9 +100,20 @@ const statusLabel = (status) => {
 
             <section class="reports-section">
                 <div class="section-header">
-                    <h2>Recent Reports</h2>
-                    <span class="report-count">{{ recentReports.length }} reports</span>
+                    <div class="section-header-left">
+                        <h2>Recent Reports</h2>
+                        <span class="report-count">{{ recentReports.length }} reports</span>
+                    </div>
+
+                    <Link
+                        :href="route('admin.problems.index')"
+                        class="admin-link"
+                    >
+                        Problem Review
+                        <span class="admin-link-arrow">→</span>
+                    </Link>
                 </div>
+
 
                 <div v-if="recentReports.length > 0" class="reports-table">
                     <table>
@@ -140,6 +157,36 @@ const statusLabel = (status) => {
 </template>
 
 <style scoped>
+.section-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ab-cyan);
+    font-weight: 900;
+    text-decoration: none;
+    padding: 10px 14px;
+    border: 1px solid rgba(56, 217, 255, 0.25);
+    border-radius: 10px;
+    background: rgba(56, 217, 255, 0.06);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(56, 217, 255, 0.45);
+    background: rgba(56, 217, 255, 0.12);
+}
+
+.admin-link-arrow {
+    color: var(--ab-teal);
+}
+
 .admin-dashboard {
     width: min(1400px, calc(100% - 32px));
     margin: 28px auto 40px;
@@ -147,12 +194,18 @@ const statusLabel = (status) => {
     gap: 28px;
 }
 
-.dashboard-header {
+ .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
 }
+
+.dashboard-header-right {
+    display: flex;
+    align-items: flex-start;
+}
+
 
 .dashboard-header h1 {
     margin: 0;

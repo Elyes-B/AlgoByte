@@ -2,15 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Member;
 use Illuminate\Http\Request;
 use App\Models\Problem;
-
+use App\Models\Submission;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ProblemCreationController extends Controller
 {
-    /**
-     * Handle the incoming request to create a new problem.
-     */
+    public function index()
+    {
+        $userId = Auth::id();
+
+    return Inertia::render('problemCreation', [
+        'problems' => Problem::query()
+            ->where('creatorId', $userId)
+            ->with('testCases')
+            ->get(),
+        'dashboardCounts' => [
+            // Count members that are not admins. Some rows may have null/0/false for is_admin,
+            // so include those cases to ensure accurate totals.
+            'total_users' => Member::query()->where(function($q) {
+                $q->where('is_admin', false)
+                  ->orWhere('is_admin', 0)
+                  ->orWhereNull('is_admin');
+            })->count('*'),
+            'total_admins' => Member::query()->where('is_admin', true)->count(),
+            'problems_on_site' => Problem::query()->count('*'),
+            'created_problems' => Problem::query()->where('creatorId', $userId)->count('*'),
+            'submissions' => Submission::query()->count('*'),
+        ],
+    ]);
+    }
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -72,7 +96,7 @@ class ProblemCreationController extends Controller
 
         return response()->json([
             'message' => 'Problem created successfully.',
-            'data' => [ 
+            'data' => [
                 'id' => $problem->id,
                 'title' => $problem->title,
                 'description' => $problem->description,
@@ -84,5 +108,21 @@ class ProblemCreationController extends Controller
                 'updated_at' => $problem->updated_at?->toISOString(),
             ],
         ], 201);
+    }
+
+    public function delete(Problem $problem)
+    {
+        // Prevent users from deleting problems they didn't create
+        if ($problem->creatorId !== Auth::id()) {
+            abort(403, 'You are not authorized to delete this problem.');
+        }
+
+        // Assuming you are using Laravel's SoftDeletes trait on the Problem model
+        // because your schema includes a 'deleted_at' column.
+        $problem->delete();
+
+        // Redirect back to the previous page (likely the Inertia dashboard)
+        // with a success flash message.
+        return redirect()->back()->with('success', 'Problem deleted successfully.');
     }
 }

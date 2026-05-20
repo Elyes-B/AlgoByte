@@ -3,13 +3,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 
 const props = defineProps({
-    problems: { type: Object, required: true }
+    reports: { type: Object, required: true }
 });
 
-const setStatus = (problemId, newStatus) => {
-    if (confirm(`Are you sure you want to mark this problem as ${newStatus}?`)) {
-        router.patch(route('admin.problems.updateStatus', problemId), {
-            status: newStatus
+const decideReport = (reportId, action) => {
+    const confirmationMessage = action === 'approved'
+        ? 'Delete the reported problem and approve this report?'
+        : 'Keep the problem and dismiss this report?';
+
+    if (confirm(confirmationMessage)) {
+        router.patch(route('admin.problems.updateStatus', { report: reportId }), {
+            action,
         }, {
             preserveScroll: true,
         });
@@ -24,62 +28,64 @@ const setStatus = (problemId, newStatus) => {
         <div class="admin-container">
             <header class="admin-header">
                 <div>
-                    <h1 class="admin-title">Review Submissions</h1>
-                    <p class="admin-subtitle">Manage and curate community-created problems.</p>
+                            <h1 class="admin-title">Review Reports</h1>
+                            <p class="admin-subtitle">Approve or dismiss problem reports and keep the platform safe.</p>
+
                 </div>
             </header>
-
             <div class="glass-panel">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="border-b border-[#1a2b3c] text-cyan-400 text-sm uppercase tracking-wider">
                             <th class="p-4">Id</th>
-                            <th class="p-4">Title</th>
-                            <th class="p-4">Author</th>
-                            <th class="p-4">Difficulty</th>
+                            <th class="p-4">Problem</th>
+                            <th class="p-4">Reporter</th>
+                            <th class="p-4">Reason</th>
+                            <th class="p-4">Severity</th>
                             <th class="p-4">Submitted</th>
                             <th class="p-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="problems.data.length === 0">
-                            <td colspan="5" class="p-8 text-center text-gray-500 italic">
-                                No pending problems to review. You're all caught up!
+                        <tr v-if="reports.data.length === 0">
+                            <td colspan="7" class="p-8 text-center text-gray-500 italic">
+                                No pending reports to review. You're all caught up!
                             </td>
                         </tr>
-                        <tr v-for="problem in problems.data" :key="problem.problemId" class="border-b border-[#1a2b3c]/50 hover:bg-[#1a2b3c]/20 transition">
-                            <td class="p-4 font-bold text-white">{{ problem.problemId }}</td>
-                            <Link :href="`/problems/${problem.problemId}`">
-                                {{ problem.title }}
-                            </Link>
-                            <td class="p-4 text-gray-300" v-if="problem.creator?.profile_image">
-                                <Link :href="`/users/${problem.creator.username}`" class="flex items-center">
-                                <img :src="problem.creator.profile_image" :alt="problem.creator.username" class="account-profile-image" style="display: inline-block;"/>
-                                <span style="margin-left: 10px;">{{ problem.creator.username}}</span>
+                        <tr v-for="report in reports.data" :key="report.reportId" class="border-b border-[#1a2b3c]/50 hover:bg-[#1a2b3c]/20 transition">
+                            <td class="p-4 font-bold text-white">{{ report.reportId }}</td>
+                            <td class="p-4">
+                                <Link v-if="report.problem" :href="route('browse-problems.show', report.problem.problemId)" class="text-cyan-200 hover:text-white">
+                                    {{ report.problem.title }}
                                 </Link>
+                                <span v-else class="text-gray-400">Problem removed</span>
                             </td>
-                            <td class="p-4 text-gray-300" v-else>'Unknown'</td>
+                            <td class="p-4 text-gray-300">
+                                <span v-if="report.reporter">{{ report.reporter.username }}</span>
+                                <span v-else class="text-gray-500">Unknown</span>
+                            </td>
+                            <td class="p-4 text-gray-300">{{ report.reason }}</td>
                             <td class="p-4">
                                 <span class="px-2 py-1 text-xs rounded border border-gray-600 text-gray-300">
-                                    {{ problem.difficulty }}
-                               </span>
+                                    {{ report.severity }}
+                                </span>
                             </td>
                             <td class="p-4 text-gray-400 text-sm">
-                                {{ new Date(problem.created_at).toLocaleDateString() }}
+                                {{ new Date(report.created_at).toLocaleDateString() }}
                             </td>
                             <td class="p-4 text-right space-x-2">
-                                <button @click="setStatus(problem.problemId, 'Accepted')" class="action-btn accept-btn" title="Accept">
-                                    <i class="bi bi-check-lg"></i> Accept
+                                <button type="button" @click="decideReport(report.reportId, 'approved')" class="action-btn accept-btn" title="Approve Report">
+                                    <i class="bi bi-check-lg"></i> Approve
                                 </button>
-                                <button @click="setStatus(problem.problemId, 'Rejected')" class="action-btn reject-btn" title="Reject">
-                                    <i class="bi bi-x-lg"></i> Reject
+                                <button type="button" @click="decideReport(report.reportId, 'rejected')" class="action-btn reject-btn" title="Keep Problem">
+                                    <i class="bi bi-x-lg"></i> Keep
                                 </button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
 
-                </div>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

@@ -4,14 +4,20 @@ import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
     member: { type: Object, required: true },
-    isOwner: { type: Boolean, default: false } // Add this line
+    isOwner: { type: Boolean, default: false }
 });
 
-const getBanner = (member) => member.background_image || '';
+// Base Supabase storage URL for public images
+const SUPABASE_STORAGE_URL = 'https://taycnalhgabfrapisbct.supabase.co/storage/v1/object/public/images';
+
+const getBanner = (member) => {
+    if (!member.background_image) return '';
+    return `${SUPABASE_STORAGE_URL}/banners/${member.background_image}`;
+};
 
 const getAvatar = (member) => {
     return member.profile_image
-        ? member.profile_image
+        ? `${SUPABASE_STORAGE_URL}/profiles/${member.profile_image}`
         : `https://ui-avatars.com/api/?name=${member.username}&background=38d9ff&color=05080d`;
 };
 </script>
@@ -24,7 +30,7 @@ const getAvatar = (member) => {
             <div class="profile-hero">
                 <div class="banner-wrapper">
                     <img v-if="getBanner(member)"
-                         :src="member.background_image"
+                         :src="getBanner(member)"
                          alt="Background"
                          class="banner-img" />
 
@@ -44,28 +50,20 @@ const getAvatar = (member) => {
                         </div>
                     </div>
 
-                   <div class="profile-actions">
-    <Link
-        v-if="isOwner"
-        :href="route('profile.edit')"
-        class="edit-btn"
-    >
-        <i class="bi bi-pencil-square"></i>
-        Edit Profile
-    </Link>
+                    <div class="profile-actions">
+                        <Link v-if="isOwner" :href="route('profile.edit')" class="edit-btn">
+                            <i class="bi bi-pencil-square"></i>
+                            Edit Profile
+                        </Link>
 
-    <Link
-    :href="route('history.index', member.username)"
-    class="edit-btn"
->
-    <i class="bi bi-clock-history"></i>
-    View History
-</Link>
-</div>
+                        <Link :href="route('history.index', member.username)" class="edit-btn">
+                            <i class="bi bi-clock-history"></i>
+                            View History
+                        </Link>
+                    </div>
                 </div>
             </div>
-
-            </div>
+        </div>
     </AuthenticatedLayout>
 </template>
 

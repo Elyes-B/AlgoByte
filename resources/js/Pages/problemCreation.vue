@@ -1,9 +1,51 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue';
+import { Head,router,usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+// View states: 'list' (Dashboard view), 'create' (Form empty), 'edit' (Form pre-filled)
+const activeView = ref('list');
+const editingProblemId = ref(null);
+
+const props = defineProps({
+    problems: {
+        type: Array,
+        default: () => []
+    },
+    dashboardCounts: {
+        type: Object,
+        default: () => ({
+            total_users: 0,
+            total_admins: 0,
+            problems_on_site: 0,
+            created_problems: 0,
+            submissions: 0,
+        })
+    }
+});
+
+const fakeProblem = {
+    id: 'fake-problem',
+    title: 'Sample Editable Problem',
+    description: 'This is a temporary problem used only for testing the edit and delete buttons.',
+    language: 'javascript',
+    solution: 'function solution(input) {\n  return input;\n}',
+    explanation: 'Return the input unchanged.',
+    visibility: 'public',
+    difficulty: 'easy',
+    test_cases: [
+        { id: 1, label: 'Example 01', arguments: ['1'], expected_output: '1' },
+        { id: 2, label: 'Example 02', arguments: ['2'], expected_output: '2' },
+    ],
+    fake: true,
+};
+const localFakeProblems = ref([fakeProblem]);
+
+const displayProblems = computed(() => (props.problems.length ? props.problems : localFakeProblems.value));
+
+const page = usePage();
 
 const languageOptions = [
     {
@@ -86,6 +128,81 @@ const createSuccess = ref('');
 const createError = ref('');
 let modeObserver;
 
+/* =========================================================================
+   🆕 CRUD NAVIGATION & ACTIONS MANAGEMENT
+   ========================================================================= */
+
+const openCreateMode = () => {
+    editingProblemId.value = null;
+    form.title = '';
+    form.description = '';
+    form.language = 'typescript';
+    form.solution = getLanguageConfig('typescript').template;
+    form.explanation = '';
+    form.visibility = 'public';
+    form.difficulty = 'medium';
+    form.testCases = [
+        createTestCase(1, 'Example 01'),
+        createTestCase(2, 'Example 02'),
+    ];
+    createSuccess.value = '';
+    createError.value = '';
+    activeView.value = 'create';
+};
+
+const openEditMode = (problem) => {
+    editingProblemId.value = problem.id;
+    form.title = problem.title;
+    form.description = problem.description;
+    form.language = problem.language;
+    form.solution = problem.solution;
+    form.explanation = problem.explanation;
+    form.visibility = problem.visibility || 'public';
+    form.difficulty = problem.difficulty;
+
+    // Check if the input details have saved arrays or parse backend payload structures
+    if (problem.test_cases && problem.test_cases.length >= 2) {
+        form.testCases = problem.test_cases.map((tc, idx) =>
+            createTestCase(tc.id || idx + 1, tc.label || `Example 0${idx + 1}`, tc.arguments || [], tc.expected_output || '')
+        );
+    } else {
+        form.testCases = [
+            createTestCase(1, 'Example 01'),
+            createTestCase(2, 'Example 02'),
+        ];
+    }
+    createSuccess.value = '';
+    createError.value = '';
+    activeView.value = 'edit';
+};
+
+const cancelForm = () => {
+    activeView.value = 'list';
+    editingProblemId.value = null;
+};
+
+const deleteProblem = async (problemId) => {
+    if (!confirm('Are you sure you want to delete this challenge permanently?')) return;
+
+    if (problemId === fakeProblem.id) {
+        localFakeProblems.value = [];
+        return;
+    }
+
+    try {
+        // Change route endpoint structure depending on your back-end configuration rules
+        router.delete(route('problem-creation.delete', { id: problemId }), {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+        // Force Inertia to fetch raw updated properties without a hard application loop reload
+        router.reload({ only: ['problems'] });
+    } catch (error) {
+        alert(error.response?.data?.message || 'Failed to remove entry details.');
+    }
+};
+
 const difficultyTone = computed(() => {
     if (form.difficulty === 'easy') {
         return 'difficulty-easy';
@@ -118,6 +235,22 @@ const eclipseTheme = {
         'editor.selectionBackground': '#c8e4ee',
     },
 };
+
+const currentMember = computed(() => page.props.auth?.member ?? {});
+const isAdmin = computed(() => [true, 1, '1', 'true'].includes(currentMember.value.is_admin));
+const adminStatusMessage = computed(() => {
+    if (currentMember.value.is_admin === undefined || currentMember.value.is_admin === null) {
+        return 'Admin status not available yet.';
+    }
+    return isAdmin.value ? 'You are in admin mode.' : 'You are in user mode.';
+});
+const dashboardCounts = computed(() => props.dashboardCounts || {
+    total_users: 0,
+    total_admins: 0,
+    problems_on_site: 0,
+    created_problems: 0,
+    submissions: 0,
+});
 
 const handleBeforeMount = (monaco) => {
     monaco.editor.defineTheme('eclipse', eclipseTheme);
@@ -608,10 +741,101 @@ const createProblem = async () => {
     <Head title="Problem Creation" />
 
     <AuthenticatedLayout>
+
+        <div class="admin-status-banner" :class="{ 'admin-active': isAdmin, 'admin-inactive': !isAdmin }">
+            <p>{{ adminStatusMessage }}</p>
+        </div>
+        <section v-if="activeView === 'list'" class="dashboard-shell panel" style="margin: 2rem; padding: 2rem;">
+            <div v-if="isAdmin" class="admin-dashboard-panel">
+                <h3>Admin dashboard</h3>
+                <div class="admin-dashboard-cards">
+                    <article class="dashboard-card gradient-blue">
+                        <div class="card-top"><svg class="card-icon" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" fill="currentColor"/></svg><span>Total users</span></div>
+                        <strong>{{ dashboardCounts.total_users }}</strong>
+                    </article>
+                    <article class="dashboard-card gradient-green">
+                        <div class="card-top"><svg class="card-icon" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" fill="currentColor"/></svg><span>Admins</span></div>
+                        <strong>{{ dashboardCounts.total_admins }}</strong>
+                    </article>
+                    <article class="dashboard-card gradient-indigo">
+                        <div class="card-top"><svg class="card-icon" viewBox="0 0 24 24" fill="none"><path d="M3 13h18v-2H3v2z" fill="currentColor"/></svg><span>Problems</span></div>
+                        <strong>{{ dashboardCounts.problems_on_site }}</strong>
+                    </article>
+                    <article class="dashboard-card gradient-orange">
+                        <div class="card-top"><svg class="card-icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" fill="currentColor"/></svg><span>Your problems</span></div>
+                        <strong>{{ dashboardCounts.created_problems }}</strong>
+                    </article>
+                    <article class="dashboard-card gradient-pink">
+                        <div class="card-top"><svg class="card-icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Submissions</span></div>
+                        <strong>{{ dashboardCounts.submissions }}</strong>
+                    </article>
+                </div>
+            </div>
+            <div class="panel-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div>
+                    <span class="panel-kicker">Workspace Manager</span>
+                    <h2>Your Problems</h2>
+                </div>
+                <button type="button" class="primary-action" @click="openCreateMode">
+                    + Create New Problem
+                </button>
+            </div>
+
+            <div v-if="displayProblems.length === 0" class="empty-state-container" style="text-align: center; padding: 4rem 1rem;">
+                <p style="opacity: 0.6; margin-bottom: 1.5rem;">You have not configured or published any tasks yet.</p>
+                <button type="button" class="secondary-action" @click="openCreateMode">Set up your first problem</button>
+            </div>
+
+            <div v-else class="table-responsive" style="width: 100%; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                            <th style="padding: 12px;">Problem Details</th>
+                            <th style="padding: 12px;">Difficulty</th>
+                            <th style="padding: 12px;">Default Environment</th>
+                            <th style="padding: 12px; text-align: right;">Options</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="problem in displayProblems" :key="problem.id" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 12px;">
+                                <strong>{{ problem.title }}</strong>
+                                <div style="font-size: 0.8rem; opacity: 0.5;">
+                                    Visibility: {{ problem.visibility || 'public' }}
+                                    <span v-if="problem.fake" style="margin-left: 0.6rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(59,130,246,0.12); color: #1d4ed8; font-size: 0.75rem;">Sample</span>
+                                </div>
+                            </td>
+                            <td style="padding: 12px;">
+                                <span :class="['difficulty-pill', `difficulty-${problem.difficulty}`]" style="display: inline-block; padding: 2px 8px; font-size: 0.75rem;">
+                                    {{ problem.difficulty }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px; text-transform: capitalize;">{{ problem.language }}</td>
+                            <td style="padding: 12px; text-align: right;">
+                                <button type="button" class="secondary-action" style="margin-right: 0.5rem; padding: 4px 10px; font-size: 0.85rem;" @click="openEditMode(problem)">
+                                    Modify
+                                </button>
+                                <button type="button" class="secondary-action action-secondary" style="padding: 4px 10px; font-size: 0.85rem; border-color: rgba(239,68,68,0.4); color: #ef4444;" @click="deleteProblem(problem.problemId)">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section v-else class="creation-shell">
+            <div style="margin: 0 2rem 1.5rem 2rem;">
+                <button type="button" class="secondary-action" @click="cancelForm">
+                    ← Back to Dashboard List
+                </button>
+            </div>
+
         <section class="creation-shell">
             <div class="creation-grid">
                 <div class="creation-main">
-                    
+
 
                     <form class="creation-form" @submit.prevent="validateAllTestCases">
                         <section class="panel">
@@ -938,6 +1162,7 @@ const createProblem = async () => {
                     </div>
                 </aside>
             </div>
+            </section>
         </section>
     </AuthenticatedLayout>
 </template>
@@ -972,7 +1197,88 @@ const createProblem = async () => {
 
 
 
-.section-header {
+.admin-status-banner {
+        width: min(1320px, 100%);
+        margin: 1rem auto 0;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        color: #111827;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .admin-status-banner.admin-inactive {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.25);
+        color: #991b1b;
+    }
+
+    .admin-status-banner.admin-active {
+        background: rgba(34, 197, 94, 0.12);
+        border-color: rgba(34, 197, 94, 0.25);
+        color: #065f46;
+    }
+
+.admin-dashboard-panel {
+        margin-bottom: 1.5rem;
+        padding: 1rem 1.25rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.04);
+        border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    .admin-dashboard-panel h3 {
+        margin: 0 0 1rem;
+        font-size: 1.05rem;
+        color: #111827;
+    }
+
+    .admin-dashboard-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+
+    .dashboard-card {
+        padding: 1rem 1.1rem;
+        border-radius: 14px;
+        background: white;
+        border: 1px solid rgba(209, 213, 219, 0.8);
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .card-top {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: rgba(17,24,39,0.9);
+        font-weight: 600;
+    }
+    .card-icon { width: 22px; height: 22px; color: rgba(17,24,39,0.9);}
+    .dashboard-card strong { font-size: 1.6rem; }
+
+    .gradient-blue { background: linear-gradient(135deg, #eff6ff, #e0f2fe); border: none; }
+    .gradient-green { background: linear-gradient(135deg, #ecfdf5, #bbf7d0); border: none; }
+    .gradient-indigo { background: linear-gradient(135deg, #eef2ff, #e0e7ff); border: none; }
+    .gradient-orange { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: none; }
+    .gradient-pink { background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: none; }
+
+    .dashboard-card span {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .dashboard-card strong {
+        font-size: 1.5rem;
+        color: #111827;
+    }
+
+    .section-header {
     padding: 8px 4px 2px;
 }
 

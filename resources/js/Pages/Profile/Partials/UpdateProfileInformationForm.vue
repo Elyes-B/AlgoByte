@@ -2,23 +2,36 @@
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     member: { type: Object, required: true },
 });
 
-// Track the last uploaded file metadata to prevent duplicates
+const SUPABASE_STORAGE_URL = 'https://taycnalhgabfrapisbct.supabase.co/storage/v1/object/public/images';
+
+// Helper to determine pathing between current upload state and backend records
+const resolveSupabasePath = (fileName, folder) => {
+    if (!fileName) return null;
+    if (fileName.startsWith('data:')) return fileName; // local FileReader preview
+    return `${SUPABASE_STORAGE_URL}/${folder}/${fileName}`;
+};
+
 const lastUploads = ref({
     profile_image: { name: '', size: 0 },
     background_image: { name: '', size: 0 }
 });
 
-const profilePreview = ref(props.member.profile_image);
-const backgroundPreview = ref(props.member.background_image);
+const profilePreview = ref(resolveSupabasePath(props.member.profile_image, 'profiles'));
+const backgroundPreview = ref(resolveSupabasePath(props.member.background_image, 'banners'));
+
+// Watcher ensures that once Inertia finishes processing, the view updates without page refreshes
+watch(() => props.member, (newMember) => {
+    profilePreview.value = resolveSupabasePath(newMember.profile_image, 'profiles');
+    backgroundPreview.value = resolveSupabasePath(newMember.background_image, 'banners');
+}, { deep: true });
 
 const form = useForm({
     _method: 'PATCH',
@@ -46,22 +59,12 @@ const submit = () => {
     form.post(route('profile.update'), {
         preserveScroll: true,
         onSuccess: () => {
-            // Update "Last Upload" tracking on success
             if (form.profile_image) {
-                lastUploads.value.profile_image = {
-                    name: form.profile_image.name,
-                    size: form.profile_image.size
-                };
+                lastUploads.value.profile_image = { name: form.profile_image.name, size: form.profile_image.size };
             }
             if (form.background_image) {
-                lastUploads.value.background_image = {
-                    name: form.background_image.name,
-                    size: form.background_image.size
-                };
+                lastUploads.value.background_image = { name: form.background_image.name, size: form.background_image.size };
             }
-
-            // CRITICAL: Clear the files from the form so they aren't re-uploaded
-            // on the next submission (e.g., if the user just changes their name)
             form.profile_image = null;
             form.background_image = null;
         },
@@ -81,7 +84,7 @@ const submit = () => {
                 <div class="flex flex-col items-center p-4 border border-gray-800 rounded-xl bg-black/20">
                     <InputLabel value="Profile Picture" class="mb-4" />
                     <div class="relative group cursor-pointer" @click="$refs.profileInput.click()">
-                        <img :src="profilePreview || `https://ui-avatars.com/api/?name=${form.username}`"
+                        <img :src="profilePreview || `https://ui-avatars.com/api/?name=${form.username}&background=38d9ff&color=05080d`"
                              class="w-32 h-32 rounded-2xl object-cover border-2 border-cyan-500/50 group-hover:opacity-75 transition" />
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                             <span class="text-xs font-bold text-white uppercase">Change</span>

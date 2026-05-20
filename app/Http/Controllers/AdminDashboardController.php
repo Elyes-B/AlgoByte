@@ -29,7 +29,7 @@ class AdminDashboardController extends Controller
             ->get()
             ->map(function ($report) {
                 return [
-                    'id' => $report->reportId,
+                    'reportId' => $report->reportId,
                     'reporter' => $report->reporter?->username ?? 'Unknown',
                     'problem' => $report->problem?->title ?? 'Unknown',
                     'reason' => $report->reason,
@@ -39,15 +39,10 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-            Inertia::render('Admin/Dashboard', [
+        return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'recentReports' => $recentReports,
         ]);
-
-            return response()->json([
-            'message' => 'Problem created successfully.',
-            ]
-        , 201);
 
 
 

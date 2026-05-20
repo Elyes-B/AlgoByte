@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,15 +30,44 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user->fill([
+            'username' => $validated['username'] ?? $user->username,
+            'email' => $validated['email'] ?? $user->email,
+        ]);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        // --- Handle Profile Image Upload (Using Supabase S3/Disk) ---
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image) {
+                Storage::disk('supabase')->delete('profiles/' . $user->profile_image);
+            }
 
-        return Redirect::route('profile.edit');
+            // Stores in your 'images' bucket inside a 'profiles' folder
+            $path = $request->file('profile_image')->store('profiles', 'supabase');
+
+            // Extract just the filename or store the relative bucket path 'profiles/filename.jpg'
+            $user->profile_image = basename($path);
+        }
+
+        // --- Handle Background Image Upload (Using Supabase S3/Disk) ---
+        if ($request->hasFile('background_image')) {
+            if ($user->background_image) {
+                Storage::disk('supabase')->delete('banners/' . $user->background_image);
+            }
+
+            $path = $request->file('background_image')->store('banners', 'supabase');
+            $user->background_image = basename($path);
+        }
+
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('success', 'Profile updated successfully.');
     }
 
     /**
